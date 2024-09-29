@@ -124,3 +124,19 @@ footer {
 }
 
 /* кінець іконок для особистого кабінету та пошуку */
+
+/* категорії */
+
+.list-group-item:hover {
+    background-color: #f2f3f6;
+}
+/* кінець категорій */
+
+/* слайдер */
+
+.carousel img {
+    max-height: 300px;
+    object-fit: cover;
+}
+
+/* кінець слайдера */
