@@ -7,11 +7,9 @@
                 <div>
                     <h5 class="ml-3 small"><b>Жанри</b></h5>
                     <ul class="list-group">
-                        <li class="list-group-item small">Фантастика</li>
-                        <li class="list-group-item small">Детектив</li>
-                        <li class="list-group-item small">Психологія</li>
-                        <li class="list-group-item small">Історія</li>
-                        <li class="list-group-item small">Філософія</li>
+                        {% for genre in genres %}
+                            <li class="list-group-item small">{{ genre['Name_genre'] }}</li>
+                        {% endfor %}
                     </ul>
                 </div>
             </div>
