@@ -2,32 +2,30 @@
 
 {% block content %}
 <div class="container">
-        <div class="row">
-            <div class="col-md-2">
-                <div>
-                    <h5 class="ml-3 small"><b>Жанри</b></h5>
-                    <ul class="list-group">
-                        {% for genre in genres %}
-                            <li class="list-group-item small">{{ genre['Name_genre'] }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
+    <div class="row">
+        <div class="col-md-2">
+            <div>
+                <h5 class="ml-3 small"><b>Жанри</b></h5>
+                <ul class="list-group">
+                    {% for genre in genres %}
+                    <li class="list-group-item small">{{ genre['Name_genre'] }}</li>
+                    {% endfor %}
+                </ul>
             </div>
+        </div>
 
-            <div class="col-md-10">
+        <div class="col-md-10">
+            <div class="bg-white rounded-div">
                 <div id="bannerCarousel" class="carousel slide p-3" data-ride="carousel">
                     <div class="carousel-inner">
                         <div class="carousel-item active">
-                            <img src="../static/img/photo1.jpg" class="d-block w-100"
-                                alt="Слайд 1">
+                            <img src="../static/img/photo1.jpg" class="d-block w-100" alt="Слайд 1">
                         </div>
                         <div class="carousel-item">
-                            <img src="../static/img/photo2.jpg" class="d-block w-100"
-                                alt="Слайд 2">
+                            <img src="../static/img/photo2.jpg" class="d-block w-100" alt="Слайд 2">
                         </div>
                         <div class="carousel-item">
-                            <img src="../static/img/photo3.jpg" class="d-block w-100"
-                                alt="Слайд 3">
+                            <img src="../static/img/photo3.jpg" class="d-block w-100" alt="Слайд 3">
                         </div>
                     </div>
                     <a class="carousel-control-prev" href="#bannerCarousel" role="button" data-slide="prev">
@@ -39,8 +37,39 @@
                         <span class="sr-only">Наступний</span>
                     </a>
                 </div>
+                <div class="row p-3">
+                    <h2 class="px-3">Всі книги</h2>
+                </div>
+                <div class="row p-3">
+                    {% for book in books %}
+                    <div class="col-6 col-md-2 mb-4">
+                        <div class="card h-100 border-0 shadow-none">
+                            <a href="/book/{{ book.ID_book }}">
+                                <img src="{{ url_for('static', filename='img/book' + book.ID_book|string) + '.jpg' }}"
+                                    class="card-img-top book-image" alt="{{ book.Book_name }}">
+                            </a>
+                            <div class="card-body">
+                                <a href="/book/{{ book.ID_book }}" class="text-decoration-none text-dark">
+                                    <h6 class="card-title text-truncate"><b>{{ book.Book_name }}</b></h6>
+                                </a>
+                                <h6 class="card-text text-truncate">{{ book.A_Name }} {{ book.A_Patronymics if
+                                    book.A_Patronymics else '' }} {{ book.A_Surname }}</h6>
+                                <h6 class="card-text text-primary">Ціна: {{ book.Price }} грн</h6>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="py-3">
+                <h5><b>Інтернет-магазин книг Bookstore</b></h5>
+
+                <h6>Bookstore — це провідна національна книжкова платформа в Україні, яка є найбільшим онлайн-магазином
+                    книг. Наша мета — перетворити Україну на країну з найвищим рівнем читання в Європі. Адже нація, яка
+                    продовжує читати навіть в умовах війни, є непереможною.</h6>
             </div>
         </div>
+    </div>
 
 </div>
 {% endblock content %}

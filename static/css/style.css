@@ -140,3 +140,20 @@ footer {
 }
 
 /* кінець слайдера */
+
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.footer-links a {
+    font-size: 1rem;
+    text-decoration: none;
+}
+
+.rounded-div {
+    border-radius: 1rem;
+    overflow: hidden;
+}

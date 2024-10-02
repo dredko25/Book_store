@@ -12,12 +12,17 @@ db = SQLAlchemy(app)
 @app.route('/')
 def main():
     try:
-        result = db.session.execute(text("SELECT * FROM Genre"))
-        genres = result.fetchall()
+        g = db.session.execute(text("SELECT * FROM Genre"))
+        genres = g.fetchall()
 
-        genres_list = [{column: value for column, value in zip(result.keys(), genre)} for genre in genres]
+        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+        
+        b = db.session.execute(text("SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price FROM Book as B JOIN Author as A ON b.ID_author = A.ID_author"))
+        books = b.fetchall()
 
-        return render_template('main.html', genres=genres_list)
+        books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+
+        return render_template('main.html', genres=genres_list, books=books_list)
 
     except Exception as e:
         return f"Виникла помилка: {e}"
