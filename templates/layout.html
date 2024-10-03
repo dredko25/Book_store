@@ -40,7 +40,37 @@
             </div>
         </header>
         <main>
-            {% block content %} {% endblock %}
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-2">
+                        <div>
+                            <h5 class="ml-3 small"><b>Жанри</b></h5>
+                            <ul class="list-group">
+                                {% for genre in genres %}
+                                <li class="list-group-item small">
+                                    <a href="/genre/{{ genre['Name_genre'] }}"
+                                        class="text-decoration-none text-dark w-100 d-block">{{
+                                        genre['Name_genre'] }}</a>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-md-10">
+                        {% block content %} {% endblock %}
+                        <div class="py-3">
+                            <h5><b>Інтернет-магазин книг Bookstore</b></h5>
+
+                            <h6>Bookstore — це провідна національна книжкова платформа в Україні, яка є найбільшим
+                                онлайн-магазином
+                                книг. Наша мета — перетворити Україну на країну з найвищим рівнем читання в Європі. Адже
+                                нація, яка
+                                продовжує читати навіть в умовах війни, є непереможною.</h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
         <footer class="bg-white text-dark py-4">
             <div class="container">

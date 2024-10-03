@@ -130,6 +130,7 @@ footer {
 .list-group-item:hover {
     background-color: #f2f3f6;
 }
+
 /* кінець категорій */
 
 /* слайдер */
@@ -142,12 +143,6 @@ footer {
 /* кінець слайдера */
 
 
-.text-truncate {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .footer-links a {
     font-size: 1rem;
     text-decoration: none;
@@ -157,3 +152,25 @@ footer {
     border-radius: 1rem;
     overflow: hidden;
 }
+
+/* стилізація карток книг при наведенні */
+
+.book-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.book-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.book-image {
+    transition: opacity 0.3s ease;
+}
+
+.book-card:hover .book-image {
+    opacity: 0.8;
+}
+
+/* кінець стилізації карток книг при навденні */
+
