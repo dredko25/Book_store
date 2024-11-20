@@ -5,6 +5,10 @@
     <div class="row p-3">
         <h2 class="px-3">{{ genre }}</h2>
     </div>
+    <div class="row px-3">
+        <!-- Сортування -->
+        {% include 'sort_dropdown.html' %}
+    </div>
     <div class="row p-3">
         {% for book in books %}
         <div class="col-6 col-md-2 mb-4">

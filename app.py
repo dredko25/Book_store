@@ -4,20 +4,34 @@ from sqlalchemy import text
 
 app = Flask(__name__)
 
-# Підключення до БД
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mssql+pyodbc://@localhost/Book_store?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes'
 db = SQLAlchemy(app)
 
+def get_genres():
+    genres_query = db.session.execute(text("SELECT * FROM Genre"))
+    genres = genres_query.fetchall()
+    return [{column: value for column, value in zip(genres_query.keys(), genre)} for genre in genres]
 
 @app.route('/')
 def main():
     try:
-        g = db.session.execute(text("SELECT * FROM Genre"))
-        genres = g.fetchall()
-
-        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+        genres_list = get_genres()
         
-        b = db.session.execute(text("SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price FROM Book as B JOIN Author as A ON b.ID_author = A.ID_author"))
+        sort = request.args.get('sort', '')
+        
+        query = """
+            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
+                   B.Price, B.Year_of_publication
+            FROM Book AS B
+            JOIN Author AS A ON B.ID_author = A.ID_author
+        """
+        
+        if sort == 'price_asc':
+            query += " ORDER BY B.Price ASC"
+        elif sort == 'price_desc':
+            query += " ORDER BY B.Price DESC"
+
+        b = db.session.execute(text(query))
         books = b.fetchall()
 
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
@@ -34,18 +48,30 @@ def genre_books(genre_name):
         genre_result = genre_query.fetchone()
         genre_id = genre_result[0]
 
+        sort = request.args.get('sort', '')
+        
+        query = """
+            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price 
+            FROM Book as B 
+            JOIN Author as A ON B.ID_author = A.ID_author 
+            WHERE B.ID_genre = :genre_id
+        """
+        
+        if sort == 'price_asc':
+            query += " ORDER BY B.Price ASC"
+        elif sort == 'price_desc':
+            query += " ORDER BY B.Price DESC"
+            
         b = db.session.execute(
-            text("SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price FROM Book as B JOIN Author as A ON B.ID_author = A.ID_author WHERE B.ID_genre = :genre_id"),
+            text(query),
             {'genre_id': genre_id}
         )
+        
         books = b.fetchall()
 
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
         
-        g = db.session.execute(text("SELECT * FROM Genre"))
-        genres = g.fetchall()
-
-        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+        genres_list = get_genres()
 
         return render_template('genre_books.html', genres=genres_list, genre=genre_name, books=books_list)
 
@@ -56,12 +82,8 @@ def genre_books(genre_name):
 @app.route('/book/<int:book_id>')
 def book_details(book_id):
     try:
-        g = db.session.execute(text("SELECT * FROM Genre"))
-        genres = g.fetchall()
-
-        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+        genres_list = get_genres()
         
-        # Отримання даних про книгу
         book_query = text("""
             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
                    G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
@@ -111,10 +133,9 @@ def book_details(book_id):
 def search():
     try:
         query = request.args.get('query', '').strip()
+        sort = request.args.get('sort', '')
         
-        g = db.session.execute(text("SELECT * FROM Genre"))
-        genres = g.fetchall()
-        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+        genres_list = get_genres()
 
         if query:
             b = db.session.execute(text("""
@@ -138,7 +159,13 @@ def search():
                 JOIN Author as A ON b.ID_author = A.ID_author
             """))
         
-        books = b.fetchall()
+        if sort == 'price_asc':
+            books = sorted(b.fetchall(), key=lambda x: x.Price)
+        elif sort == 'price_desc':
+            books = sorted(b.fetchall(), key=lambda x: x.Price, reverse=True)
+        else:
+            books = b.fetchall()
+            
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
 
         if not books_list:
@@ -146,7 +173,7 @@ def search():
         else:
             message = None
 
-        return render_template('search_result.html', genres=genres_list, books=books_list, message=message)
+        return render_template('search_result.html', genres=genres_list, books=books_list, message=message, query=query)
 
     except Exception as e:
         return f"Виникла помилка: {e}"
@@ -155,5 +182,3 @@ def search():
     
 if __name__ == '__main__':
     app.run(debug=True)
-
-

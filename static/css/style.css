@@ -174,3 +174,21 @@ footer {
 
 /* кінець стилізації карток книг при навденні */
 
+/* Кнопка сортування */
+#sortDropdown {
+    background: none;
+    border: none;
+    padding: 0.2rem 0.4rem;
+    font-size: 14px;
+    color: inherit;
+}
+
+#sortDropdown:focus {
+    outline: none;
+}
+
+.dropdown-menu {
+    min-width: 160px;
+}
+
+/* Кінець кнопки сортування */
