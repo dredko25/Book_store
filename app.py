@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 
@@ -107,6 +107,49 @@ def book_details(book_id):
     except Exception as e:
         return f"Виникла помилка: {e}"
 
+@app.route('/search', methods=['GET'])
+def search():
+    try:
+        query = request.args.get('query', '').strip()
+        
+        g = db.session.execute(text("SELECT * FROM Genre"))
+        genres = g.fetchall()
+        genres_list = [{column: value for column, value in zip(g.keys(), genre)} for genre in genres]
+
+        if query:
+            b = db.session.execute(text("""
+                SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
+                    G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
+                    B.Year_of_publication, B.Price, G.Descriptions
+                FROM Book AS B
+                JOIN Author AS A ON B.ID_author = A.ID_author
+                JOIN Genre AS G ON B.ID_genre = G.ID_genre
+                JOIN Publishing_house AS PH ON B.ID_publishing_house = PH.ID_publishing_house
+                WHERE B.Book_name LIKE :query
+                OR A.A_Name LIKE :query
+                OR A.A_Surname LIKE :query
+                OR PH.Name_book LIKE :query
+            """), {'query': f"%{query}%"})
+
+        else:
+            b = db.session.execute(text("""
+                SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price 
+                FROM Book as B 
+                JOIN Author as A ON b.ID_author = A.ID_author
+            """))
+        
+        books = b.fetchall()
+        books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+
+        if not books_list:
+            message = "Нічого не знайдено за вашим запитом."
+        else:
+            message = None
+
+        return render_template('search_result.html', genres=genres_list, books=books_list, message=message)
+
+    except Exception as e:
+        return f"Виникла помилка: {e}"
 
     
     
