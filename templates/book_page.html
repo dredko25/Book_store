@@ -19,10 +19,15 @@
             <h5 class="text-muted">Автор: {{ book.A_Name }} {{ book.A_Patronymics if book.A_Patronymics else '' }} {{ book.A_Surname }}</h5>
             <h6 class="text-muted">Жанр: {{ book.Genre_Name }}</h6>
             <h6 class="text-muted">Видавництво: {{ book.Publishing_House }}</h6>
-            <!-- в бд треба виправити рік публікації на рік видавництва -->
             <h6 class="text-muted">Рік видавництва: {{ book.Year_of_publication }}</h6>
-            <h6 class="text-primary">Ціна: {{ book.Price }} грн</h6>
-            <p class="mt-3">{{ book.Descriptions }}</p>
+            <h6 class="mt-3">{{ book.Descriptions }}</h6>
+            <h4 class="text-primary">Ціна: {{ book.Price }} грн</h4>
+
+            <form method="POST" action="/add_to_cart/{{ book.ID_book }}" class="mt-3">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="fas fa-shopping-cart"></i> Додати в кошик
+                </button>
+            </form>
 
             <!-- Відгуки, якщо треба такий функціонал, потрбіно це додати і в бд -->
             <div class="mt-4">
@@ -49,3 +54,4 @@
     </div>
 </div>
 {% endblock content %}
+

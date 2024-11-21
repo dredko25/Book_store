@@ -265,6 +265,18 @@ def logout():
     session.clear()
 
     return redirect(url_for('main'))
+
+@app.route('/add_to_cart/<int:book_id>', methods=['POST'])
+def add_to_cart(book_id):
+    try:
+        cart = session.get('cart', [])
+        cart.append(book_id)
+        session['cart'] = cart
+        flash('Книга успішно додана до кошика!', 'success')
+    except Exception as e:
+        flash(f'Помилка додавання до кошика: {e}', 'danger')
+    return redirect(url_for('book_details', book_id=book_id))
+
   
     
 if __name__ == '__main__':
