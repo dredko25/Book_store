@@ -31,6 +31,10 @@ def main():
             query += " ORDER BY B.Price ASC"
         elif sort == 'price_desc':
             query += " ORDER BY B.Price DESC"
+        elif sort == 'name_asc':
+            query += " ORDER BY B.Book_name ASC"
+        elif sort == 'name_desc':
+            query += " ORDER BY B.Book_name DESC"
 
         b = db.session.execute(text(query))
         books = b.fetchall()
@@ -62,6 +66,10 @@ def genre_books(genre_name):
             query += " ORDER BY B.Price ASC"
         elif sort == 'price_desc':
             query += " ORDER BY B.Price DESC"
+        elif sort == 'name_asc':
+            query += " ORDER BY B.Book_name ASC"
+        elif sort == 'name_desc':
+            query += " ORDER BY B.Book_name DESC"
             
         b = db.session.execute(
             text(query),
@@ -158,6 +166,10 @@ def search():
             books = sorted(b.fetchall(), key=lambda x: x.Price)
         elif sort == 'price_desc':
             books = sorted(b.fetchall(), key=lambda x: x.Price, reverse=True)
+        elif sort == 'name_asc':
+            books = sorted(b.fetchall(), key=lambda x: x.Book_name)
+        elif sort == 'name_desc':
+            books = sorted(b.fetchall(), key=lambda x: x.Book_name, reverse=True)
         else:
             books = b.fetchall()
             
