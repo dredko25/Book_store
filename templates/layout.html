@@ -30,15 +30,23 @@
                 </a>
                 <div class="search-container flex-grow-1 mx-3">
                     <form action="/search" method="GET" class="d-flex">
-                        <input type="text" name="query" class="form-control search-input" placeholder="Знайти книгу..." 
-                               aria-label="Пошук" value="{{ request.args.get('query', '') }}">
+                        <input type="text" name="query" class="form-control search-input" placeholder="Знайти книгу..."
+                            aria-label="Пошук" value="{{ request.args.get('query', '') }}">
                         <button type="submit" class="btn btn-primary search-button ml-2">Пошук</button>
                     </form>
-                </div>                
+                </div>
                 <div class="d-flex">
-                    <button class="icon-button mr-2">
+                    {% if session.get('user_id') %}
+                    <span class="mr-3">Привіт, {{ session['user_name'] }}</span>
+                    <a href="/logout" class="icon-button">
+                        <i class="fas fa-sign-out-alt"></i> Вийти
+                    </a>
+                    {% else %}
+                    <button class="icon-button mr-2" data-toggle="modal" data-target="#authModal">
                         <i class="fas fa-user"></i> Увійти
                     </button>
+                    {% include "modal.html" %}
+                    {% endif %}
                     <button class="icon-button">
                         <i class="fas fa-shopping-cart"></i> Кошик
                     </button>
@@ -48,22 +56,11 @@
         <main>
             <div class="container">
                 <div class="row">
-                    <div class="col-md-2">
-                        <div>
-                            <h5 class="ml-3 small"><b>Жанри</b></h5>
-                            <ul class="list-group">
-                                {% for genre in genres %}
-                                <li class="list-group-item small">
-                                    <a href="/genre/{{ genre['Name_genre'] }}"
-                                        class="text-decoration-none text-dark w-100 d-block">{{
-                                        genre['Name_genre'] }}</a>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    </div>
+                    {% block genres_sidebar %}
+                    {% endblock %}
 
-                    <div class="col-md-10">
+                    <div
+                        class="col-md-10 {% if request.endpoint == 'register' or request.endpoint == 'login' %} col-md-12 {% endif %}">
                         {% block content %} {% endblock %}
                         <div class="py-3">
                             <h5><b>Інтернет-магазин книг Bookstore</b></h5>
@@ -119,6 +116,8 @@
     <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script> -->
+
+    <script src="static/js/auth.js"></script>
 </body>
 
 </html>

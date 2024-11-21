@@ -1,0 +1,14 @@
+<div class="col-md-2">
+    <div>
+        <h5 class="ml-3 small"><b>Жанри</b></h5>
+        <ul class="list-group">
+            {% for genre in genres %}
+            <li class="list-group-item small">
+                <a href="/genre/{{ genre['Name_genre'] }}" class="text-decoration-none text-dark w-100 d-block">
+                    {{ genre['Name_genre'] }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
