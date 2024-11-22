@@ -48,9 +48,12 @@
                     </button>
                     {% include "modal.html" %}
                     {% endif %}
-                    <button class="icon-button">
+                    <!-- <button class="icon-button">
                         <i class="fas fa-shopping-cart"></i> Кошик
-                    </button>
+                    </button> -->
+                    <a href="{{ url_for('cart') }}" class="icon-button">
+                        <i class="fas fa-shopping-cart"></i> Кошик
+                    </a>
                 </div>
             </div>
         </header>
@@ -61,7 +64,7 @@
                     {% endblock %}
 
                     <div
-                        class="col-md-10 {% if request.endpoint == 'register' or request.endpoint == 'login' %} col-md-12 {% endif %}">
+                        class="col-md-10 {% if request.endpoint == 'cart' or request.endpoint == 'login' %} col-md-12 {% endif %}">
                         {% block content %} {% endblock %}
                         <div class="py-3">
                             <h5><b>Інтернет-магазин книг Bookstore</b></h5>

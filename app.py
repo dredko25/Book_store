@@ -269,15 +269,124 @@ def logout():
 @app.route('/add_to_cart/<int:book_id>', methods=['POST'])
 def add_to_cart(book_id):
     try:
-        cart = session.get('cart', [])
-        cart.append(book_id)
-        session['cart'] = cart
-        flash('Книга успішно додана до кошика!', 'success')
-    except Exception as e:
-        flash(f'Помилка додавання до кошика: {e}', 'danger')
-    return redirect(url_for('book_details', book_id=book_id))
+        book_query = text("""
+            SELECT ID_book, Book_name, Price
+            FROM Book
+            WHERE ID_book = :book_id
+        """)
+        book = db.session.execute(book_query, {'book_id': book_id}).fetchone()
 
-  
+        if not book:
+            return redirect(url_for('main'))
+
+        cart = session.get('cart', [])
+
+        if cart and isinstance(cart[0], int):
+            cart = []
+
+        for item in cart:
+            if item['id'] == book_id:
+                item['quantity'] += 1
+                session['cart'] = cart
+                return redirect(url_for('cart'))
+
+        cart.append({
+            'id': book.ID_book,
+            'name': book.Book_name,
+            'price': book.Price,
+            'quantity': 1,
+            'image': '/static/img/book' + str(book.ID_book) + '.jpg'
+        })
+        session['cart'] = cart
+    except Exception as e:
+        return f"Сталася помилка: {e}"
+
+    return redirect(url_for('main'))
+
+@app.route('/cart', methods=['GET', 'POST'])
+def cart():
+    cart = session.get('cart', [])
+    total_quantity = 0
+
+    for item in cart:
+        total_quantity += item['quantity']
+
+    total_price = sum(item['price'] * item['quantity'] for item in cart)
+
+    return render_template('cart.html', cart_items=cart, total_price=total_price, total_quantity=total_quantity)
+
+@app.route('/remove_from_cart/<int:item_id>', methods=['POST'])
+def remove_from_cart(item_id):
+    cart = session.get('cart', [])
+    updated_cart = [item for item in cart if item['id'] != item_id]
+    session['cart'] = updated_cart
+    return redirect(url_for('cart'))
+
+
+# @app.route('/update_quantity/<int:item_id>', methods=['POST'])
+# def update_quantity(item_id):
+#     cart = session.get('cart', [])
+#     new_quantity = request.form.get('quantity')
+
+#     try:
+#         new_quantity = int(new_quantity)
+#         if new_quantity < 1:
+#             return jsonify({"success": False, "message": "Кількість не може бути менше 1."})
+#     except ValueError:
+#         return jsonify({"success": False, "message": "Некоректне значення кількості."})
     
+#     total = sum(item['quantity'] * item['price'] for item in cart)
+
+#     # Оновлення кількості товару
+#     for item in cart:
+#         if item['id'] == item_id:
+#             item['quantity'] = new_quantity
+#             break
+
+#     session['cart'] = cart
+    
+#     return redirect(url_for('cart'))
+
+
+@app.route('/update_quantity/<int:item_id>', methods=['POST'])
+def update_quantity(item_id):
+    cart = session.get('cart', [])
+    new_quantity = request.form.get('quantity')
+
+    try:
+        new_quantity = int(new_quantity)
+        if new_quantity < 1:
+            flash("Кількість не може бути менше 1.", "danger")
+            return redirect(url_for('cart'))  # Повертаємося на кошик, якщо кількість менша за 1
+    except ValueError:
+        flash("Некоректне значення кількості.", "danger")
+        return redirect(url_for('cart'))  # Повертаємося на кошик у випадку помилки вводу
+    
+    # Оновлення кількості товару в корзині
+    for item in cart:
+        if item['id'] == item_id:
+            item['quantity'] = new_quantity
+            break
+
+    session['cart'] = cart
+    
+    # Перерахунок загальної суми
+    total_price = sum(item['quantity'] * item['price'] for item in cart)
+    total_quantity = sum(item['quantity'] for item in cart)
+
+    # Оновлення сесії та редірект на кошик
+    flash("Кількість товару оновлено.", "success")
+    return redirect(url_for('cart'))  # Повертаємось на кошик, щоб показати нові значення
+
+
+@app.route('/checkout', methods=['POST'])
+def checkout():
+    # Тут має бути логіка для оформлення замовлення
+    session.pop('cart', None)  # Очищаємо кошик після оформлення
+    flash("Замовлення успішно оформлено!", "success")
+    return redirect(url_for('cart'))
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
