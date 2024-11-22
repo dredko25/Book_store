@@ -314,8 +314,16 @@ def cart():
     total_sum = sum(item['quantity'] * item['price'] for item in cart)
 
     session['total_sum'] = total_sum
+    
+    user_data = {
+        'email': session.get('user_login', ''),
+        'first_name': session.get('user_name', ''),
+        'last_name': session.get('user_surname', ''),
+        'phone': session.get('user_phone', ''),
+        'address': session.get('user_address', ''),
+    }
 
-    return render_template('cart.html', cart_items=cart, total_quantity=total_quantity)
+    return render_template('cart.html', cart_items=cart, total_quantity=total_quantity, user_data=user_data)
 
 @app.route('/remove_from_cart/<int:item_id>', methods=['POST'])
 def remove_from_cart(item_id):
