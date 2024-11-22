@@ -310,10 +310,12 @@ def cart():
 
     for item in cart:
         total_quantity += item['quantity']
+    
+    total_sum = sum(item['quantity'] * item['price'] for item in cart)
 
-    total_price = sum(item['price'] * item['quantity'] for item in cart)
+    session['total_sum'] = total_sum
 
-    return render_template('cart.html', cart_items=cart, total_price=total_price, total_quantity=total_quantity)
+    return render_template('cart.html', cart_items=cart, total_quantity=total_quantity)
 
 @app.route('/remove_from_cart/<int:item_id>', methods=['POST'])
 def remove_from_cart(item_id):
@@ -321,32 +323,6 @@ def remove_from_cart(item_id):
     updated_cart = [item for item in cart if item['id'] != item_id]
     session['cart'] = updated_cart
     return redirect(url_for('cart'))
-
-
-# @app.route('/update_quantity/<int:item_id>', methods=['POST'])
-# def update_quantity(item_id):
-#     cart = session.get('cart', [])
-#     new_quantity = request.form.get('quantity')
-
-#     try:
-#         new_quantity = int(new_quantity)
-#         if new_quantity < 1:
-#             return jsonify({"success": False, "message": "Кількість не може бути менше 1."})
-#     except ValueError:
-#         return jsonify({"success": False, "message": "Некоректне значення кількості."})
-    
-#     total = sum(item['quantity'] * item['price'] for item in cart)
-
-#     # Оновлення кількості товару
-#     for item in cart:
-#         if item['id'] == item_id:
-#             item['quantity'] = new_quantity
-#             break
-
-#     session['cart'] = cart
-    
-#     return redirect(url_for('cart'))
-
 
 @app.route('/update_quantity/<int:item_id>', methods=['POST'])
 def update_quantity(item_id):
@@ -357,26 +333,25 @@ def update_quantity(item_id):
         new_quantity = int(new_quantity)
         if new_quantity < 1:
             flash("Кількість не може бути менше 1.", "danger")
-            return redirect(url_for('cart'))  # Повертаємося на кошик, якщо кількість менша за 1
+            return redirect(url_for('cart'))
     except ValueError:
         flash("Некоректне значення кількості.", "danger")
-        return redirect(url_for('cart'))  # Повертаємося на кошик у випадку помилки вводу
-    
-    # Оновлення кількості товару в корзині
+        return redirect(url_for('cart'))
+
     for item in cart:
         if item['id'] == item_id:
             item['quantity'] = new_quantity
             break
 
     session['cart'] = cart
-    
-    # Перерахунок загальної суми
-    total_price = sum(item['quantity'] * item['price'] for item in cart)
-    total_quantity = sum(item['quantity'] for item in cart)
 
-    # Оновлення сесії та редірект на кошик
+    total_sum = sum(item['quantity'] * item['price'] for item in cart)
+    session['total_sum'] = total_sum
+
     flash("Кількість товару оновлено.", "success")
-    return redirect(url_for('cart'))  # Повертаємось на кошик, щоб показати нові значення
+    return redirect(url_for('cart'))
+
+
 
 
 @app.route('/checkout', methods=['POST'])

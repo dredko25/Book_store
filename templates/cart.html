@@ -106,7 +106,7 @@
                 <div class="bg-white rounded-div p-3 shadow mt-4">
                     <h5 class="d-flex justify-content-between">
                         <span>Разом</span>
-                        <span class="fw-bold" id="total-sum">{{ total_price }} грн</span>
+                        <span class="fw-bold" id="total-sum">{{ session.get('total_sum', 0) }} грн</span>
                     </h5>
                     <button class="btn btn-primary w-100 mt-3" form="checkoutForm">Підтвердити замовлення</button>
                 </div>
