@@ -361,32 +361,6 @@ def update_quantity(item_id):
     flash("Кількість товару оновлено.", "success")
     return redirect(url_for('cart'))
 
-
-
-
-# @app.route('/checkout', methods=['POST'])
-# def checkout():
-#     cart = session.get('cart', [])
-#     if not cart:
-#         print("Ваш кошик порожній. Додайте хоча б один товар перед оформленням замовлення.", "danger")
-#         return redirect(url_for('cart'))
-
-#     first_name = request.form.get('firstName', '').strip()
-#     last_name = request.form.get('lastName', '').strip()
-#     phone = request.form.get('phone', '').strip()
-#     email = request.form.get('email', '').strip()
-#     address = request.form.get('address', '').strip()
-
-#     if not all([first_name, last_name, phone, email, address]):
-#         print("Усі поля обов'язкові до заповнення. Перевірте форму та спробуйте ще раз.", "danger")
-#         return redirect(url_for('cart'))
-
-#     print("Ваше замовлення прийнято! Дякуємо за покупку.", "success")
-#     session.pop('cart', None)
-#     session.pop('total_sum', None)
-#     return redirect(url_for('cart'))
-
-
 @app.route('/checkout', methods=['POST'])
 def checkout():
     cart = session.get('cart', [])
@@ -475,6 +449,34 @@ def checkout():
         db.session.rollback()
         print(f"Сталася помилка: {str(e)}", "danger")
         return redirect(url_for('cart'))
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
+@app.route('/contact')
+def contact():
+    return render_template('contact.html')
+
+@app.route('/faq')
+def faq():
+    return render_template('faq.html')
+
+@app.route('/privacy-policy')
+def privacy_policy():
+    return render_template('privacy_policy.html')
+
+@app.route('/delivery')
+def delivery():
+    return render_template('delivery.html')
+
+@app.route('/payment')
+def payment():
+    return render_template('payment.html')
+
+@app.route('/guarantee')
+def guarantee():
+    return render_template('guarantee.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
