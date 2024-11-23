@@ -1,7 +1,9 @@
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from datetime import datetime
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.secret_key = 'a8e9f8ad6cfd4e1bb5a34b7e8e2c9fd1afbd2c1f12a56d3e7f8a9e'
@@ -362,14 +364,117 @@ def update_quantity(item_id):
 
 
 
+# @app.route('/checkout', methods=['POST'])
+# def checkout():
+#     cart = session.get('cart', [])
+#     if not cart:
+#         print("Ваш кошик порожній. Додайте хоча б один товар перед оформленням замовлення.", "danger")
+#         return redirect(url_for('cart'))
+
+#     first_name = request.form.get('firstName', '').strip()
+#     last_name = request.form.get('lastName', '').strip()
+#     phone = request.form.get('phone', '').strip()
+#     email = request.form.get('email', '').strip()
+#     address = request.form.get('address', '').strip()
+
+#     if not all([first_name, last_name, phone, email, address]):
+#         print("Усі поля обов'язкові до заповнення. Перевірте форму та спробуйте ще раз.", "danger")
+#         return redirect(url_for('cart'))
+
+#     print("Ваше замовлення прийнято! Дякуємо за покупку.", "success")
+#     session.pop('cart', None)
+#     session.pop('total_sum', None)
+#     return redirect(url_for('cart'))
+
+
 @app.route('/checkout', methods=['POST'])
 def checkout():
-    # Тут має бути логіка для оформлення замовлення
-    session.pop('cart', None)  # Очищаємо кошик після оформлення
-    flash("Замовлення успішно оформлено!", "success")
-    return redirect(url_for('cart'))
+    cart = session.get('cart', [])
+    if not cart:
+        flash("Ваш кошик порожній. Додайте хоча б один товар перед оформленням замовлення.", "danger")
+        return redirect(url_for('cart'))
 
+    first_name = request.form.get('firstName', '').strip()
+    last_name = request.form.get('lastName', '').strip()
+    phone = request.form.get('phone', '').strip()
+    email = request.form.get('email', '').strip()
+    address = request.form.get('address', '').strip()
 
+    if not all([first_name, last_name, phone, email, address]):
+        flash("Усі поля обов'язкові до заповнення. Перевірте форму та спробуйте ще раз.", "danger")
+        return redirect(url_for('cart'))
+
+    try:
+        user_login = session.get('user_login')
+        print(user_login)
+        if user_login:
+            customer = db.session.execute(
+                text("SELECT * FROM Customer WHERE user_login = :login"),
+                {'login': user_login}
+            ).fetchone()
+        else:
+            db.session.execute(
+                text("""
+                INSERT INTO Customer (user_login, C_Surname, C_Name, Phone_number, Addres)
+                VALUES (:login, :surname, :name, :phone, :address)
+                """),
+                {
+                    'login': email,
+                    'surname': last_name,
+                    'name': first_name,
+                    'phone': phone,
+                    'address': address
+                }
+            )
+            db.session.commit()
+            customer = db.session.execute(
+                text("SELECT * FROM Customer WHERE user_login = :login"),
+                {'login': email}
+            ).fetchone()
+            print(customer)
+
+        db.session.execute(
+            text("""
+            INSERT INTO Orders (ID_customer, Date_of_orders, Total_sum)
+            VALUES (:customer_id, :order_date, :total_sum)
+            """),
+            {
+                'customer_id': customer.ID_customer,
+                'order_date': datetime.now(),
+                'total_sum': session.get('total_sum', 0)
+            }
+        )
+        db.session.commit()
+
+        order = db.session.execute(
+            text("SELECT * FROM Orders WHERE ID_customer = :customer_id ORDER BY ID_orders DESC"),
+            {'customer_id': customer.ID_customer}
+        ).fetchone()
+
+        for item in cart:
+            db.session.execute(
+                text("""
+                INSERT INTO Cart (ID_orders, ID_book, Number_of_orders)
+                VALUES (:order_id, :book_id, :quantity)
+                """),
+                {
+                    'order_id': order.ID_orders,
+                    'book_id': item['id'],
+                    'quantity': item['quantity']
+                }
+            )
+        db.session.commit()
+
+        session.pop('cart', None)
+        session.pop('total_sum', None)
+
+        flash("Ваше замовлення прийнято! Дякуємо за покупку.", "success")
+        return redirect(url_for('cart'))
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        print(f"Сталася помилка: {str(e)}", "danger")
+        return redirect(url_for('cart'))
 
 if __name__ == '__main__':
     app.run(debug=True)
