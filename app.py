@@ -187,6 +187,11 @@ def search():
     except Exception as e:
         return f"Виникла помилка: {e}"
 
+# Приклад логіну та паролю для адміна
+# Можна ці записи тут зберегти, або додати відповідне поле в бд для користувачів, і таким чином надалі надавати іншим людям відповідні права
+ADMIN_EMAIL = 'admin@gmail.com'
+ADMIN_PASSWORD = 'admin123'
+
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form['email']
@@ -202,6 +207,10 @@ def login():
     """)
     
     user = db.session.execute(user_query, {'email': email}).fetchone()
+    
+    # Для адміна
+    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+        return redirect(url_for('catalog'))
 
     if not user:
         return "Користувача з таким email не знайдено!"
@@ -217,6 +226,148 @@ def login():
     session['user_address'] = user[7]
 
     return redirect(url_for('main'))
+
+@app.route('/catalog')
+def catalog():
+    book_query = text("""
+        SELECT b.Book_name, b.Year_of_publication, b.Price, ph.Name_book, 
+            a.A_Name, a.A_Surname, a.A_Patronymics, g.Name_genre
+        FROM Book as b
+        JOIN Publishing_house as ph
+        ON b.ID_publishing_house = ph.ID_publishing_house
+        JOIN Author as a
+        ON b.ID_author = a.ID_author
+        JOIN Genre as g
+        ON b.ID_genre = g.ID_genre
+        """)
+    
+    b = db.session.execute(book_query)
+    books = b.fetchall()
+    books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+    print(books_list)
+    return render_template('catalog.html')
+
+@app.route('/add-item')
+def add_item():
+    queries = {
+        'genres': "SELECT g.Name_genre FROM Genre as g",
+        'publishing_houses': "SELECT ph.Name_book FROM Publishing_house as ph"
+    }
+    
+    data = {}
+    for key, query in queries.items():
+        result = db.session.execute(text(query))
+        data[key] = [row[0] for row in result.fetchall()]
+    
+    return render_template('add_item.html', genres=data['genres'], publishing_houses=data['publishing_houses'])
+
+@app.route('/add-item-db', methods=['POST'])
+def add_item_bd():
+    # Отримання даних з форми
+    book_title = request.form.get('book_title')
+    publication_year = request.form.get('publication_year')
+    price = request.form.get('price')
+    publisher = request.form.get('publisher')
+    if publisher == 'custom':
+        custom_publisher = request.form.get('custom_publisher')
+    else:
+        custom_publisher = publisher
+    genre = request.form.get('genre')
+    if genre == 'custom':
+        custom_genre = request.form.get('custom_genre')
+    else:
+        custom_genre = genre
+    author_surname = request.form.get('author_lastname')
+    author_name = request.form.get('author_firstname')
+    author_patronymic = request.form.get('author_middlename')
+
+    response = {"success": True, "message": "Книга успішно додана"}
+
+    try:
+        # Перевіряємо автора
+        author_query = text("""
+            SELECT ID_author FROM Author
+            WHERE A_Surname = :surname AND A_Name = :name AND A_Patronymics = :patronymic
+        """)
+        author = db.session.execute(author_query, {
+            'surname': author_surname,
+            'name': author_name,
+            'patronymic': author_patronymic
+        }).fetchone()
+
+        if not author:
+            # Додаємо нового автора
+            insert_author_query = text("""
+                INSERT INTO Author (A_Surname, A_Name, A_Patronymics)
+                OUTPUT INSERTED.ID_author
+                VALUES (:surname, :name, :patronymic)
+            """)
+            author_id = db.session.execute(insert_author_query, {
+                'surname': author_surname,
+                'name': author_name,
+                'patronymic': author_patronymic
+            }).fetchone()[0]
+        else:
+            author_id = author[0]
+
+        # Перевіряємо жанр
+        genre_to_check = custom_genre if genre == 'custom' else genre
+        genre_query = text("SELECT ID_genre FROM Genre WHERE Name_genre = :genre")
+        genre = db.session.execute(genre_query, {'genre': genre_to_check}).fetchone()
+
+        if not genre:
+            # Додаємо новий жанр
+            insert_genre_query = text("""
+                INSERT INTO Genre (Name_genre)
+                OUTPUT INSERTED.ID_genre
+                VALUES (:genre)
+            """)
+            genre_id = db.session.execute(insert_genre_query, {'genre': genre_to_check}).fetchone()[0]
+        else:
+            genre_id = genre[0]
+
+        # Перевіряємо видавництво
+        publisher_to_check = custom_publisher if publisher == 'custom' else publisher
+        publisher_query = text("SELECT ID_publishing_house FROM Publishing_house WHERE Name_book = :publisher")
+        publisher = db.session.execute(publisher_query, {'publisher': publisher_to_check}).fetchone()
+
+        if not publisher:
+            # Додаємо нове видавництво
+            insert_publisher_query = text("""
+                INSERT INTO Publishing_house (Name_book)
+                OUTPUT INSERTED.ID_publishing_house
+                VALUES (:publisher)
+            """)
+            publisher_id = db.session.execute(insert_publisher_query, {'publisher': publisher_to_check}).fetchone()[0]
+        else:
+            publisher_id = publisher[0]
+
+        # Додаємо книгу
+        insert_book_query = text("""
+            INSERT INTO Book (Book_name, Year_of_publication, Price, ID_author, ID_genre, ID_publishing_house)
+            VALUES (:book_name, :year, :price, :author_id, :genre_id, :publisher_id)
+        """)
+        db.session.execute(insert_book_query, {
+            'book_name': book_title,
+            'year': publication_year,
+            'price': price,
+            'author_id': author_id,
+            'genre_id': genre_id,
+            'publisher_id': publisher_id
+        })
+        db.session.commit()
+
+    except Exception as e:
+        db.session.rollback()
+        response = {"success": False, "message": str(e)}
+        print(response)
+
+    return redirect(url_for('catalog'))
+
+
+@app.route('/mailing')
+def mailing():
+    return render_template('mailing.html')
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -477,6 +628,10 @@ def payment():
 @app.route('/guarantee')
 def guarantee():
     return render_template('guarantee.html')
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
