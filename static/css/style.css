@@ -1,3 +1,7 @@
+html {
+    overflow-y: scroll;
+}
+
 *,
 *::before,
 *::after {
@@ -217,14 +221,15 @@ footer {
 /* Кінець стилізації випадаючого меню оплати */
 
 /* Стилізація інпута для кількості товару в кошику */
-.no-spinner::-webkit-inner-spin-button, 
-.no-spinner::-webkit-outer-spin-button { 
-    -webkit-appearance: none; 
-    margin: 0; 
+.no-spinner::-webkit-inner-spin-button,
+.no-spinner::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .no-spinner {
-    -moz-appearance: textfield; /* Для Firefox */
+    -moz-appearance: textfield;
+    /* Для Firefox */
 }
-/* Кінець стилізації інпута */
 
+/* Кінець стилізації інпута */
