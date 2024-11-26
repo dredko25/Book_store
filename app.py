@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import SQLAlchemyError
+import smtplib
+from email.mime.text import MIMEText
 
 app = Flask(__name__)
 app.secret_key = 'a8e9f8ad6cfd4e1bb5a34b7e8e2c9fd1afbd2c1f12a56d3e7f8a9e'
@@ -468,6 +470,35 @@ def cancel_order(order_id):
     except Exception as e:
         print(e)
         return redirect(url_for('order_details', order_id=order_id))
+
+@app.route('/send_newsletter', methods=['POST'])
+def send_newsletter():
+    subject = request.form['subject']
+    message = request.form['message']
+
+    email_query = text("""
+            SELECT DISTINCT user_login
+            FROM Customer;
+        """)
+    emails = db.session.execute(email_query).fetchall()
+
+    for email in emails:
+        send_email(email[0], subject, message)
+
+    return redirect(url_for('catalog'))
+
+def send_email(to_email, subject, message):
+    sender_email = "reddashka@ukr.net"
+    password = "uXlaFJqaPkBnIej1"
+
+    msg = MIMEText(message)
+    msg['Subject'] = subject
+    msg['From'] = sender_email
+    msg['To'] = to_email
+
+    with smtplib.SMTP_SSL("smtp.ukr.net", 465) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, to_email, msg.as_string())
 
 
 @app.route('/mailing')

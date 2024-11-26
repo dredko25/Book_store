@@ -1,5 +1,21 @@
 {% extends "layout_admin.html" %}
 
 {% block content %}
-
+<div class="bg-white rounded-div p-4">
+    <h2 class="mb-4">Створити розсилку</h2>
+    <form method="POST" action="{{ url_for('send_newsletter') }}">
+        <div class="mb-3">
+            <label for="subject" class="form-label"><strong>Тема</strong></label>
+            <input type="text" class="form-control" id="subject" name="subject" placeholder="Введіть тему" required>
+        </div>
+        <div class="mb-3">
+            <label for="message" class="form-label"><strong>Текст повідомлення</strong></label>
+            <textarea class="form-control" id="message" name="message" rows="6" placeholder="Введіть текст повідомлення"
+                required></textarea>
+        </div>
+        <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">Відправити</button>
+        </div>
+    </form>
+</div>
 {% endblock content %}
