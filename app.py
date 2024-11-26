@@ -102,17 +102,6 @@ def book_details(book_id):
             WHERE B.ID_book = :book_id
         """)
         book = db.session.execute(book_query, {'book_id': book_id}).fetchone()
-
-        # Отримання відгуків про книгу
-        # reviews_query = text("""
-        #     SELECT R.user_name, R.content 
-        #     FROM Reviews AS R 
-        #     WHERE R.ID_book = :book_id
-        # """)
-        # reviews = db.session.execute(reviews_query, {'book_id': book_id}).fetchall()
-
-        # book_details = {column: value for column, value in zip(book.keys(), book)}
-        # print(book_details)
         
         book_details = {
             'ID_book': book.ID_book,
@@ -126,12 +115,8 @@ def book_details(book_id):
             'Price': book.Price,
             'Descriptions': book.Descriptions
         }
-        
-        # print(book_details)
-        
-        # reviews_list = [{'user_name': review.user_name, 'content': review.content} for review in reviews]
 
-        return render_template('book_page.html', book=book_details) #, reviews=reviews_list
+        return render_template('book_page.html', book=book_details)
 
     except Exception as e:
         return f"Виникла помилка: {e}"
