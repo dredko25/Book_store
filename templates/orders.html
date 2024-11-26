@@ -1,0 +1,34 @@
+{% extends "layout_admin.html" %}
+
+{% block content %}
+<div class="bg-white rounded-div p-4">
+    <h2 class="mb-4">Список замовлень</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr class="align-middle" style="font-size: 1.3rem;">
+                <th scope="col" class="py-3">ID замовлення</th>
+                <th scope="col" class="py-3">Дата</th>
+                <th scope="col" class="py-3">Деталі</th>
+                <th scope="col" class="py-3">Коментар</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr class="align-middle" style="font-size: 1rem;">
+                <td class="py-2">{{ order.ID_orders }}</td>
+                <td class="py-2">{{ order.Date_of_orders }}</td>
+                <td class="py-2">
+                    <a href="{{ url_for('order_details', order_id=order['ID_orders']) }}"
+                        class="btn btn-sm btn-primary">
+                        Деталі
+                    </a>
+                </td>
+                <td class="py-2">
+                    {{ order.get('Comment', 'Коментар відсутній') }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock content %}

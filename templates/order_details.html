@@ -1,0 +1,58 @@
+{% extends "layout_admin.html" %}
+
+{% block content %}
+<div class="bg-white rounded-div p-4">
+    <h2 class="mb-4">Деталі замовлення №{{ order[0].ID_orders }}</h2>
+    <div class="mb-4" style="font-size: 1.1rem;">
+        <p><strong>Дата замовлення:</strong> {{ order[0].Date_of_orders }}</p>
+        <p><strong>Замовник:</strong> {{ order[0].C_Surname }} {{ order[0].C_Name }} {{ order[0].C_Patronymics }}</p>
+        <p><strong>Контактний номер:</strong> {{ order[0].Phone_number }}</p>
+        <p><strong>Ел. пошта:</strong> {{ order[0].user_login }}</p>
+        <p><strong>Адреса доставки:</strong> {{ order[0].Addres }}</p>
+    </div>
+
+    <h4 class="mb-3">Список товарів</h4>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr class="align-middle" style="font-size: 1.2rem;">
+                <th scope="col" class="py-3">Назва товару</th>
+                <th scope="col" class="py-3">Кількість</th>
+                <th scope="col" class="py-3">Ціна</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detail in order %}
+            <tr class="align-middle" style="font-size: 1rem;">
+                <td class="py-2">{{ detail.Book_name }}</td>
+                <td class="py-2">{{ detail.Number_of_orders }}</td>
+                <td class="py-2">{{ detail.Subtotal }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="mt-4 mb-4" style="font-size: 1.1rem;">
+        <p><strong>Загальна сума:</strong> {{ order[0].Total_sum }}</p>
+    </div>
+
+    <h4 class="mb-3">Коментар до замовлення</h4>
+    <div class="mb-4">
+        <form method="POST" action="{{ url_for('update_comment', order_id=order[0].ID_orders) }}">
+            <div class="input-group">
+                <textarea class="form-control" name="comment" rows="1"
+                    placeholder="Додати або редагувати коментар">{{ order[0].Comment if order[0].Comment else '' }}</textarea>
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">Зберегти</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <a href="{{ url_for('orders') }}" class="btn btn-secondary">Повернутися до списку замовлень</a>
+        <form method="POST" action="{{ url_for('cancel_order', order_id=order[0].ID_orders) }}">
+            <button type="submit" class="btn btn-danger">Скасувати замовлення</button>
+        </form>
+    </div>
+</div>
+{% endblock content %}

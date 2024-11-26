@@ -369,7 +369,6 @@ def edit_item(book_id):
 
     return render_template('edit_item.html', book=book, genres=genres, publishing_houses=publishing_houses)
 
-
 @app.route('/add-item')
 def add_item():
     queries = {
@@ -409,6 +408,66 @@ def add_item_bd():
         return f"Сталася помилка: {e}"
     
     return redirect(url_for('catalog'))
+
+@app.route('/orders')
+def orders():
+    try:
+        orders_query = text("SELECT o.ID_orders, o.Date_of_orders, o.Total_sum FROM Orders AS o")
+        o = db.session.execute(orders_query)
+        orders = o.fetchall()
+        orders_list = [{column: value for column, value in zip(o.keys(), order)} for order in orders]
+        return render_template('orders.html', orders=orders_list)
+    except Exception as e:
+        return str(e)
+
+@app.route('/orders/<int:order_id>')
+def order_details(order_id):
+    try:
+        order_details_query = text("""
+            SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, c.ID_book, b.Book_name, c.Number_of_orders, 
+                (b.Price * c.Number_of_orders) AS Subtotal, cs.C_Surname, cs.C_Name, cs.C_Patronymics, 
+                cs.Phone_number, cs.user_login, cs.Addres
+            FROM Orders AS o
+            JOIN Cart AS c ON o.ID_orders = c.ID_orders
+            JOIN Book AS b ON c.ID_book = b.ID_book
+            JOIN Customer AS cs ON o.ID_customer = cs.ID_customer
+            WHERE o.ID_orders = :order_id
+        """)
+        o = db.session.execute(order_details_query, {'order_id': order_id})
+        orders = o.fetchall()
+        order_data = [{column: value for column, value in zip(o.keys(), order)} for order in orders]
+        return render_template('order_details.html', order=order_data)
+    except Exception as e:
+        return str(e)
+
+@app.route('/update_comment/<int:order_id>', methods=['POST'])
+def update_comment(order_id):
+    try:
+        comment = request.form.get('comment')
+        update_query = text("""
+            UPDATE Orders
+            SET Comment = :comment
+            WHERE ID_orders = :order_id
+        """)
+        db.session.execute(update_query, {'comment': comment, 'order_id': order_id})
+        db.session.commit()
+        return redirect(url_for('orders'))
+    except Exception as e:
+        return str(e)
+    
+@app.route('/cancel_order/<int:order_id>', methods=['POST'])
+def cancel_order(order_id):
+    try:
+        cancel_query = text("""
+            DELETE FROM Orders
+            WHERE ID_orders = :order_id;
+        """)
+        db.session.execute(cancel_query, {'order_id': order_id})
+        db.session.commit()
+        return redirect(url_for('orders'))
+    except Exception as e:
+        print(e)
+        return redirect(url_for('order_details', order_id=order_id))
 
 
 @app.route('/mailing')
