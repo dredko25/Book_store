@@ -1,0 +1,74 @@
+{% extends "layout_admin.html" %}
+
+{% block content %}
+<div class="bg-white rounded-div p-4">
+    <h2 class="mb-4">Додати новий товар</h2>
+    <form id="catalog-form" method="POST" action="/add-item-db">
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="book-title">Назва книги</label>
+                <input type="text" class="form-control" id="book-title" name="book_title"
+                    placeholder="Введіть назву книги" required>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="publication-year">Рік видавництва</label>
+                <input type="number" class="form-control" id="publication-year" name="publication_year"
+                    placeholder="Наприклад, 2023" required>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="price">Ціна</label>
+                <input type="number" class="form-control" id="price" name="price" placeholder="Введіть ціну в гривнях"
+                    required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="book-description">Опис книги</label>
+            <textarea class="form-control" id="book-description" name="book_description" rows="4"
+                placeholder="Введіть опис книги"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="publisher">Назва видавництва</label>
+            <select class="form-control" id="publisher" name="publisher" required>
+                <option value="" disabled selected>Оберіть видавництво</option>
+                {% for publishing_house in publishing_houses %}
+                <option value="{{ publishing_house }}">{{ publishing_house }}</option>
+                {% endfor %}
+                <option value="custom">Інше (ввести вручну)</option>
+            </select>
+            <input type="text" class="form-control mt-2 d-none" id="custom-publisher" name="custom_publisher"
+                placeholder="Введіть своє видавництво">
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="author-lastname">Прізвище автора</label>
+                <input type="text" class="form-control" id="author-lastname" name="author_lastname"
+                    placeholder="Прізвище" required>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="author-firstname">Ім'я автора</label>
+                <input type="text" class="form-control" id="author-firstname" name="author_firstname" placeholder="Ім'я"
+                    required>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="author-middlename">По батькові</label>
+                <input type="text" class="form-control" id="author-middlename" name="author_middlename"
+                    placeholder="По батькові">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="genre">Жанр</label>
+            <select class="form-control" id="genre" name="genre" required>
+                <option value="" disabled selected>Оберіть жанр</option>
+                {% for genre in genres %}
+                <option value="{{ genre }}">{{ genre }}</option>
+                {% endfor %}
+                <option value="custom">Інше (ввести вручну)</option>
+            </select>
+            <input type="text" class="form-control mt-2 d-none" id="custom-genre" name="custom_genre"
+                placeholder="Введіть свій жанр">
+        </div>
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+    </form>
+</div>
+<script src="{{ url_for('static', filename='js/add_item.js') }}"></script>
+{% endblock content %}

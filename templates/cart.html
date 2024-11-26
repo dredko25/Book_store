@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="bg-white rounded-div p-4 shadow">
+                <h3 class="mb-4">Оформлення замовлення</h3>
+                <form method="POST" action="/checkout" id="checkoutForm">
+
+                    <h5 class="my-3">Контактні дані</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="lastName" class="form-label small">Прізвище</label>
+                                <input type="text" class="form-control" id="lastName" name="lastName" value="{{ user_data.last_name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="phone" class="form-label small">Номер телефону</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" value="{{ user_data.phone }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="firstName" class="form-label small">Ім'я</label>
+                                <input type="text" class="form-control" id="firstName" name="firstName" value="{{ user_data.first_name }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label small">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ user_data.email }}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="my-3">Доставка</h5>
+                    <div class="mb-3">
+                        <label for="address" class="form-label small">Адреса доставки</label>
+                        <textarea class="form-control" id="address" name="address" rows="3" required>{{ user_data.address }}</textarea>
+                    </div>
+
+                    <h5 class="my-3 mt-4">Спосіб оплати</h5>
+                    <div class="mb-3">
+                        <label for="paymentMethod" class="form-label small">Оберіть спосіб оплати</label>
+                        <select class="form-select custom-select" id="paymentMethod" name="paymentMethod" required>
+                            <option value="credit_card">Кредитна/Дебетова карта</option>
+                            <option value="cash_on_delivery">Готівка при отриманні</option>
+                            <option value="online_payment">Онлайн-оплата</option>
+                            <option value="paypal">PayPal</option>
+                            <option value="apple_pay">Apple Pay</option>
+                            <option value="google_pay">Google Pay</option>
+                        </select>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="bg-light rounded-div p-3 shadow mb-4">
+                <h5 class="mb-3">Товарів у кошику: {{ total_quantity }}</h5>
+                <ul class="list-unstyled">
+                    {% for item in cart_items %}
+                    <li class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ item.image }}" alt="{{ item.name }}"
+                                style="width: 50px; height: 50px; margin-right: 10px;">
+                            <div>
+                                <span class="fw-bold small">{{ item.name }}</span>
+                                <div class="text-muted small">{{ item.price }} грн</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center">
+                            <button class="btn btn-sm btn-outline-danger ms-3" form="deleteItemForm-{{ item.id }}"
+                                type="submit">
+                                Видалити
+                            </button>
+                            <form id="deleteItemForm-{{ item.id }}" method="POST"
+                                action="/remove_from_cart/{{ item.id }}">
+                            </form>
+                        </div>
+                    </li>
+
+                    <li class="d-flex justify-content-end align-items-center mb-3">
+                        <div class="d-flex align-items-center justify-content-between" style="gap: 5px;">
+                            <form id="updateQuantityForm-{{ item.id }}" method="POST" action="/update_quantity/{{ item.id }}" class="d-flex align-items-center">
+                                <button class="btn btn-outline-secondary btn-sm" type="submit" name="decrement"
+                                    onclick="document.getElementById('quantity-{{ item.id }}').stepDown();">
+                                    −
+                                </button>
+                                <input type="number" id="quantity-{{ item.id }}"
+                                    class="form-control text-center no-spinner mx-2" name="quantity"
+                                    value="{{ item.quantity }}" min="1" required style="width: 60px;"
+                                    onkeydown="handleEnterKey(event, '{{ item.id }}')"> <!-- передаємо item.id -->
+                                <button class="btn btn-outline-secondary btn-sm" type="submit" name="increment"
+                                    onclick="document.getElementById('quantity-{{ item.id }}').stepUp();">
+                                    +
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                    
+                    {% endfor %}
+                </ul>
+
+                <div class="bg-white rounded-div p-3 shadow mt-4">
+                    <h5 class="d-flex justify-content-between">
+                        <span>Разом</span>
+                        <span class="fw-bold" id="total-sum">{{ session.get('total_sum', 0) }} грн</span>
+                    </h5>
+                    <button class="btn btn-primary w-100 mt-3" form="checkoutForm">Підтвердити замовлення</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/cart.js') }}"></script>
+{% endblock content %}

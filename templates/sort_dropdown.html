@@ -1,0 +1,25 @@
+<div class="col-12">
+    <div class="dropdown">
+        <button class="btn btn-link dropdown-toggle p-1" type="button" id="sortDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Сортувати
+        </button>
+        <div class="dropdown-menu" aria-labelledby="sortDropdown">
+            {% set base_url = '' %}
+            {% if genre %}
+                <!-- For genre page -->
+                {% set base_url = url_for('genre_books', genre_name=genre) %}
+            {% elif query %}
+                <!-- For search page -->
+                {% set base_url = url_for('search') ~ '?query=' ~ query %}
+            {% else %}
+                <!-- For main page -->
+                {% set base_url = '/' %}
+            {% endif %}
+        
+            <a class="dropdown-item" href="{{ base_url }}{% if '?' in base_url %}&{% else %}?{% endif %}sort=price_asc">За ціною: зростання</a>
+            <a class="dropdown-item" href="{{ base_url }}{% if '?' in base_url %}&{% else %}?{% endif %}sort=price_desc">За ціною: спадання</a>
+            <a class="dropdown-item" href="{{ base_url }}{% if '?' in base_url %}&{% else %}?{% endif %}sort=name_asc">За назвою: від А до Я</a>
+            <a class="dropdown-item" href="{{ base_url }}{% if '?' in base_url %}&{% else %}?{% endif %}sort=name_desc">За назвою: від Я до А</a>
+        </div>        
+    </div>
+</div>

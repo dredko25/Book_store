@@ -1,0 +1,30 @@
+{% extends "layout_admin.html" %}
+
+{% block content %}
+<div class="container my-4">
+    <h2 class="mb-4">Каталог товарів</h2>
+    <div class="row">
+        {% for book in books %}
+        <div class="col-md-6 mb-3">
+            <div class="d-flex align-items-center bg-white rounded-div p-3 shadow-sm">
+                <div class="mr-3">
+                    <a href="{{ url_for('edit_item', book_id=book.ID_book) }}">
+                        <img src="{{ url_for('static', filename='img/book' ~ book.ID_book|string ~ '.jpg') }}"
+                            alt="{{ book.Book_name }}" class="rounded"
+                            style="width: 100px; height: 150px; object-fit: cover;">
+                    </a>
+                </div>
+                <div class="flex-grow-1">
+                    <a href="{{ url_for('edit_item', book_id=book.ID_book) }}" class="text-dark text-decoration-none">
+                        <h5 class="mb-2 font-weight-bold">{{ book.Book_name }}</h5>
+                    </a>
+                    <p class="mb-1 text-muted" style="font-size: 0.9rem;">{{ book.A_Name }} {{ book.A_Surname }}</p>
+                    <p class="mb-0 text-muted" style="font-size: 0.8rem;">{{ book.Name_book }}, {{
+                        book.Year_of_publication }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
