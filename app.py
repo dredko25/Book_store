@@ -96,7 +96,7 @@ def book_details(book_id):
         book_query = text("""
             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
                    G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
-                   B.Year_of_publication, B.Price, G.Descriptions
+                   B.Year_of_publication, B.Price, B.Descriptions
             FROM Book AS B
             JOIN Author AS A ON B.ID_author = A.ID_author
             JOIN Genre AS G ON B.ID_genre = G.ID_genre
@@ -133,7 +133,7 @@ def search():
             b = db.session.execute(text("""
                 SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
                     G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
-                    B.Year_of_publication, B.Price, G.Descriptions
+                    B.Year_of_publication, B.Price, B.Descriptions
                 FROM Book AS B
                 JOIN Author AS A ON B.ID_author = A.ID_author
                 JOIN Genre AS G ON B.ID_genre = G.ID_genre
@@ -174,11 +174,6 @@ def search():
     except Exception as e:
         return f"Виникла помилка: {e}"
 
-# Приклад логіну та паролю для адміна
-# Можна ці записи тут зберегти, або додати відповідне поле в бд для користувачів, і таким чином надалі надавати іншим людям відповідні права
-ADMIN_EMAIL = 'admin@gmail.com'
-ADMIN_PASSWORD = '123'
-
 @app.route('/login', methods=['POST'])
 def login():
     email = request.form['email']
@@ -192,26 +187,25 @@ def login():
         FROM Customer
         WHERE user_login = :email
     """)
-    
     user = db.session.execute(user_query, {'email': email}).fetchone()
-    
-    # Для адміна
-    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-        return redirect(url_for('catalog'))
 
     if not user:
         return "Користувача з таким email не знайдено!"
 
-    if not check_password_hash(user[2], password):
+    if not check_password_hash(user.user_password, password):
         return "Неправильний пароль!"
 
-    session['user_login'] = email
-    session['user_name'] = user[4]
-    session['user_surname'] = user[3]
-    session['user_patronymics'] = user[5]
-    session['user_phone'] = user[6]
-    session['user_address'] = user[7]
+    session['user_login'] = user.user_login
+    session['user_name'] = user.C_Name
+    session['user_surname'] = user.C_Surname
+    session['user_phone'] = user.Phone_number
+    session['user_address'] = user.Addres
 
+    if user.Is_admin:
+        session['is_admin'] = True
+        return redirect(url_for('catalog'))
+
+    session['is_admin'] = False
     return redirect(url_for('main'))
 
 @app.route('/catalog')
@@ -237,6 +231,7 @@ def process_form_data(form_data, db_session):
     book_title = form_data.get('book_title')
     publication_year = form_data.get('publication_year')
     price = form_data.get('price')
+    description = form_data.get('book_description')
 
     publisher = form_data.get('publisher')
     custom_publisher = form_data.get('custom_publisher') if publisher == 'custom' else publisher
@@ -303,8 +298,9 @@ def process_form_data(form_data, db_session):
 
         return {
             'book_title': book_title,
-            'publication_year': publication_year,
-            'price': price,
+            'publication_year': int(publication_year),
+            'price': float(price),
+            'description': description,
             'author_id': author_id,
             'genre_id': genre_id,
             'publisher_id': publisher_id
@@ -320,6 +316,7 @@ def edit_item(book_id):
         form_data = request.form
         try:
             data = process_form_data(form_data, db.session)
+            print(data['description'])
 
             edit_book_query = text("""
                 UPDATE Book
@@ -327,6 +324,7 @@ def edit_item(book_id):
                     Book_name = :book_name,
                     Year_of_publication = :year,
                     Price = :price,
+                    Descriptions = :description,
                     ID_author = :author_id,
                     ID_genre = :genre_id,
                     ID_publishing_house = :publisher_id
@@ -336,6 +334,7 @@ def edit_item(book_id):
                 'book_name': data['book_title'],
                 'year': data['publication_year'],
                 'price': data['price'],
+                'description': data['description'],
                 'author_id': data['author_id'],
                 'genre_id': data['genre_id'],
                 'publisher_id': data['publisher_id'],
@@ -351,7 +350,7 @@ def edit_item(book_id):
         return redirect(url_for('edit_item', book_id=book_id))
 
     book_query = """
-        SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, ph.Name_book, 
+        SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, b.Descriptions, ph.Name_book, 
             a.A_Name, a.A_Surname, a.A_Patronymics, g.Name_genre
         FROM Book as b
         JOIN Publishing_house as ph
@@ -427,7 +426,7 @@ def order_details(order_id):
     try:
         order_details_query = text("""
             SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, c.ID_book, b.Book_name, c.Number_of_orders, 
-                (b.Price * c.Number_of_orders) AS Subtotal, cs.C_Surname, cs.C_Name, cs.C_Patronymics, 
+                (b.Price * c.Number_of_orders) AS Subtotal, cs.C_Surname, cs.C_Name, 
                 cs.Phone_number, cs.user_login, cs.Addres
             FROM Orders AS o
             JOIN Cart AS c ON o.ID_orders = c.ID_orders
@@ -509,7 +508,6 @@ def mailing():
 def register():
     first_name = request.form['first_name']
     last_name = request.form['last_name']
-    middle_name = request.form.get('middle_name', None)
     phone = request.form['phone']
     address = request.form['delivery_address']
     email = request.form['email']
@@ -521,8 +519,8 @@ def register():
     hashed_password = generate_password_hash(password)
 
     customer_query = text("""
-        INSERT INTO Customer (user_login, user_password, C_Surname, C_Name, C_Patronymics, Phone_number, Addres)
-        VALUES (:email, :password, :last_name, :first_name, :middle_name, :phone, :address)
+        INSERT INTO Customer (user_login, user_password, C_Surname, C_Name, Phone_number, Addres)
+        VALUES (:email, :password, :last_name, :first_name, :phone, :address)
     """)
 
     try:
@@ -531,7 +529,6 @@ def register():
             'password': hashed_password,
             'first_name': first_name,
             'last_name': last_name,
-            'middle_name': middle_name,
             'phone': phone,
             'address': address
         })
@@ -540,7 +537,6 @@ def register():
         session['user_login'] = email
         session['user_name'] = first_name
         session['user_surname'] = last_name
-        session['user_patronymics'] = middle_name
         session['user_phone'] = phone
         session['user_address'] = address
         

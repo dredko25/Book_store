@@ -31,10 +31,6 @@ const registerFormContent = `
             <input type="text" class="form-control" id="registerLastName" name="last_name" placeholder="Наприклад: Петренко" required>
         </div>
         <div class="form-group">
-            <label for="registerMiddleName" class="small">По-батькові</label>
-            <input type="text" class="form-control" id="registerMiddleName" name="middle_name" placeholder="Наприклад: Олександрович">
-        </div>
-        <div class="form-group">
             <label for="registerPhone" class="small">Номер телефону</label>
             <input type="tel" class="form-control" id="registerPhone" name="phone" placeholder="Наприклад: +380501234567" required>
         </div>
