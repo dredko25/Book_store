@@ -3,7 +3,7 @@
 {% block content %}
 <div class="bg-white rounded-div p-4">
     <h2 class="mb-4">Редагувати дані про товар</h2>
-    <form id="catalog-form" method="POST" action="/edit/{{ book.ID_book }}">
+    <form id="catalog-form" method="POST" action="/edit/{{ book.ID_book }}" enctype="multipart/form-data">
         <div class="form-row">
             <div class="form-group col-md-6">
                 <label for="book-title">Назва книги</label>
@@ -68,7 +68,17 @@
             <input type="text" class="form-control mt-2 d-none" id="custom-genre" name="custom_genre"
                 placeholder="Введіть свій жанр">
         </div>
-        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <div class="form-group">
+            <label for="book-cover">Нова обкладинка</label>
+            <input type="file" class="form-control-file" id="book-cover" name="book_cover" accept="image/*">
+            <small class="form-text text-muted">Якщо не завантажувати, залишиться стара обкладинка.</small>
+        </div>
+        <div class="form-group mt-4">
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary" name="action" value="edit">Зберегти</button>
+                <button type="submit" class="btn btn-danger" name="action" value="delete" onclick="return confirm('Ви впевнені, що хочете видалити цей товар?')">Видалити товар</button>
+            </div>
+        </div>
     </form>
 
 </div>

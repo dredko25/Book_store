@@ -312,41 +312,71 @@ def process_form_data(form_data, db_session):
 @app.route('/edit/<int:book_id>', methods=['GET', 'POST'])
 def edit_item(book_id):
     if request.method == 'POST':
-        form_data = request.form
-        try:
-            data = process_form_data(form_data, db.session)
-            print(data['description'])
+        action = request.form.get('action')
 
-            edit_book_query = text("""
-                UPDATE Book
-                SET 
-                    Book_name = :book_name,
-                    Year_of_publication = :year,
-                    Price = :price,
-                    Descriptions = :description,
-                    ID_author = :author_id,
-                    ID_genre = :genre_id,
-                    ID_publishing_house = :publisher_id
-                WHERE ID_book = :book_id
-            """)
-            db.session.execute(edit_book_query, {
-                'book_name': data['book_title'],
-                'year': data['publication_year'],
-                'price': data['price'],
-                'description': data['description'],
-                'author_id': data['author_id'],
-                'genre_id': data['genre_id'],
-                'publisher_id': data['publisher_id'],
-                'book_id': book_id
-            })
-            db.session.commit()
+        if action == 'delete':
+            try:
+                delete_query = text("DELETE FROM Book WHERE ID_book = :book_id")
+                db.session.execute(delete_query, {'book_id': book_id})
+                db.session.commit()
+                print("Товар видалено успішно!", "success")
+                return redirect(url_for('catalog'))
+            except Exception as e:
+                db.session.rollback()
+                return f"Сталася помилка при видаленні: {e}"
 
-        except Exception as e:
-            db.session.rollback()
-            return f"Сталася помилка: {e}"
-        
-        print("Дані книги оновлено успішно!", "success")
-        return redirect(url_for('edit_item', book_id=book_id))
+        elif action == 'edit':
+            form_data = request.form
+            file_data = request.files.get('book_cover')
+            try:
+                data = process_form_data(form_data, db.session)
+
+                if file_data and file_data.filename:
+                    photo_data = file_data.read()
+
+                    insert_photo_query = text("""
+                        INSERT INTO Photos (Photo_data)
+                        OUTPUT INSERTED.ID_photo
+                        VALUES (:photo)
+                    """)
+                    photo_id = db.session.execute(insert_photo_query, {'photo': photo_data}).fetchone()[0]
+
+                    update_photo_query = text("""
+                        UPDATE Book
+                        SET ID_photo = :photo_id
+                        WHERE ID_book = :book_id
+                    """)
+                    db.session.execute(update_photo_query, {'photo_id': photo_id, 'book_id': book_id})
+
+                edit_book_query = text("""
+                    UPDATE Book
+                    SET 
+                        Book_name = :book_name,
+                        Year_of_publication = :year,
+                        Price = :price,
+                        Descriptions = :description,
+                        ID_author = :author_id,
+                        ID_genre = :genre_id,
+                        ID_publishing_house = :publisher_id
+                    WHERE ID_book = :book_id
+                """)
+                db.session.execute(edit_book_query, {
+                    'book_name': data['book_title'],
+                    'year': data['publication_year'],
+                    'price': data['price'],
+                    'description': data['description'],
+                    'author_id': data['author_id'],
+                    'genre_id': data['genre_id'],
+                    'publisher_id': data['publisher_id'],
+                    'book_id': book_id
+                })
+                db.session.commit()
+
+                print("Дані книги оновлено успішно!", "success")
+                return redirect(url_for('edit_item', book_id=book_id))
+            except Exception as e:
+                db.session.rollback()
+                return f"Сталася помилка: {e}"
 
     book_query = """
         SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, b.Descriptions, ph.Name_book, 
@@ -386,12 +416,25 @@ def add_item():
 @app.route('/add-item-db', methods=['POST'])
 def add_item_bd():
     form_data = request.form
+    file_data = request.files.get('book_cover')
     try:
+        if file_data and file_data.filename:
+            photo_data = file_data.read()
+
+            insert_photo_query = text("""
+                INSERT INTO Photos (Photo_data)
+                OUTPUT INSERTED.ID_photo
+                VALUES (:photo)
+            """)
+            photo_id = db.session.execute(insert_photo_query, {'photo': photo_data}).fetchone()[0]
+        else:
+            photo_id = None
+
         data = process_form_data(form_data, db.session)
 
         insert_book_query = text("""
-            INSERT INTO Book (Book_name, Year_of_publication, Price, ID_author, ID_genre, ID_publishing_house)
-            VALUES (:book_name, :year, :price, :author_id, :genre_id, :publisher_id)
+            INSERT INTO Book (Book_name, Year_of_publication, Price, ID_author, ID_genre, ID_publishing_house, ID_photo)
+            VALUES (:book_name, :year, :price, :author_id, :genre_id, :publisher_id, :photo_id)
         """)
         db.session.execute(insert_book_query, {
             'book_name': data['book_title'],
@@ -399,7 +442,8 @@ def add_item_bd():
             'price': data['price'],
             'author_id': data['author_id'],
             'genre_id': data['genre_id'],
-            'publisher_id': data['publisher_id']
+            'publisher_id': data['publisher_id'],
+            'photo_id': photo_id
         })
         db.session.commit()
 
@@ -408,6 +452,18 @@ def add_item_bd():
         return f"Сталася помилка: {e}"
     
     return redirect(url_for('catalog'))
+
+# @app.route('/delete/<int:book_id>', methods=['POST'])
+# def delete_item(book_id):
+#     try:
+#         delete_query = text("DELETE FROM Book WHERE ID_book = :book_id")
+#         db.session.execute(delete_query, {'book_id': int(book_id)})
+#         db.session.commit()
+#         return redirect(url_for('catalog'))
+#     except Exception as e:
+#         db.session.rollback()
+#         return f"Сталася помилка під час видалення товару: {e}"
+
 
 @app.route('/orders')
 def orders():
