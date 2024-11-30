@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
@@ -26,9 +27,10 @@ def main():
         
         query = """
             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
-                   B.Price, B.Year_of_publication
+                   B.Price, B.Year_of_publication, P.Photo_data
             FROM Book AS B
             JOIN Author AS A ON B.ID_author = A.ID_author
+            JOIN Photos AS P ON B.ID_photo = P.ID_photo
         """
         
         if sort == 'price_asc':
@@ -44,6 +46,8 @@ def main():
         books = b.fetchall()
 
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+        for book in books_list:
+            book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
 
         return render_template('main.html', books=books_list)
 

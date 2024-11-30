@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block genres_sidebar %}
-    {% include "genres_sidebar.html" %}
+{% include "genres_sidebar.html" %}
 {% endblock %}
 
 {% block content %}
@@ -30,25 +30,25 @@
     <div class="row p-3">
         <h2 class="px-3">Всі книги</h2>
     </div>
-    
+
     <div class="row px-3">
         <!-- Сортування -->
         {% include 'sort_dropdown.html' %}
     </div>
-    
+
     <div class="row p-3">
         {% for book in books %}
         <div class="col-6 col-md-2 mb-4">
             <div class="card h-100 border-0 shadow-none book-card">
                 <a href="/book/{{ book.ID_book }}">
-                    <img src="{{ url_for('static', filename='img/book' + book.ID_book|string) + '.jpg' }}"
-                        class="card-img-top book-image" alt="{{ book.Book_name }}">
+                    <img src="data:image/jpeg;base64,{{ book.Photo_data }}" class="card-img-top book-image" alt="{{ book.Book_name }}">
                 </a>
                 <div class="card-body book-card-body">
                     <a href="/book/{{ book.ID_book }}" class="text-decoration-none text-dark">
                         <h6 class="card-title"><b>{{ book.Book_name }}</b></h6>
                     </a>
-                    <h6 class="card-text">{{ book.A_Name }} {{ book.A_Patronymics if book.A_Patronymics else '' }} {{ book.A_Surname }}</h6>
+                    <h6 class="card-text">{{ book.A_Name }} {{ book.A_Patronymics if book.A_Patronymics else '' }} {{
+                        book.A_Surname }}</h6>
                     <h6 class="card-text text-primary">Ціна: {{ book.Price }} грн</h6>
                 </div>
             </div>
