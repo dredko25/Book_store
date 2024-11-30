@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block genres_sidebar %}
-    {% include "genres_sidebar.html" %}
+{% include "genres_sidebar.html" %}
 {% endblock %}
 
 {% block content %}
@@ -9,14 +9,14 @@
     <div class="d-flex p-3">
 
         <div class="col-md-4">
-            <img src="{{ url_for('static', filename='img/book' + book.ID_book|string) + '.jpg' }}" 
-                 class="img-fluid rounded" 
-                 alt="{{ book.Book_name }}">
+            <img src="data:image/jpeg;base64,{{ book.Photo_data }}" class="img-fluid rounded"
+                alt="{{ book.Book_name }}">
         </div>
 
         <div class="col-md-8">
             <h1 class="mb-3">{{ book.Book_name }}</h1>
-            <h5 class="text-muted">Автор: {{ book.A_Name }} {{ book.A_Patronymics if book.A_Patronymics else '' }} {{ book.A_Surname }}</h5>
+            <h5 class="text-muted">Автор: {{ book.A_Name }} {{ book.A_Patronymics if book.A_Patronymics else '' }} {{
+                book.A_Surname }}</h5>
             <h6 class="text-muted">Жанр: {{ book.Genre_Name }}</h6>
             <h6 class="text-muted">Видавництво: {{ book.Publishing_House }}</h6>
             <h6 class="text-muted">Рік видавництва: {{ book.Year_of_publication }}</h6>
@@ -32,4 +32,3 @@
     </div>
 </div>
 {% endblock content %}
-

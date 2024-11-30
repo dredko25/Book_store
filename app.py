@@ -64,9 +64,10 @@ def genre_books(genre_name):
         sort = request.args.get('sort', '')
         
         query = """
-            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price 
+            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price, P.Photo_data
             FROM Book as B 
             JOIN Author as A ON B.ID_author = A.ID_author 
+            JOIN Photos AS P ON B.ID_photo = P.ID_photo
             WHERE B.ID_genre = :genre_id
         """
         
@@ -87,6 +88,8 @@ def genre_books(genre_name):
         books = b.fetchall()
 
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+        for book in books_list:
+            book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
 
         return render_template('genre_books.html', genre=genre_name, books=books_list)
 
@@ -100,32 +103,24 @@ def book_details(book_id):
         book_query = text("""
             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
                    G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
-                   B.Year_of_publication, B.Price, B.Descriptions
+                   B.Year_of_publication, B.Price, B.Descriptions, P.Photo_data
             FROM Book AS B
             JOIN Author AS A ON B.ID_author = A.ID_author
             JOIN Genre AS G ON B.ID_genre = G.ID_genre
             JOIN Publishing_house AS PH ON B.ID_publishing_house = PH.ID_publishing_house
+            JOIN Photos AS P ON B.ID_photo = P.ID_photo
             WHERE B.ID_book = :book_id
         """)
-        book = db.session.execute(book_query, {'book_id': book_id}).fetchone()
         
-        book_details = {
-            'ID_book': book.ID_book,
-            'Book_name': book.Book_name,
-            'A_Name': book.A_Name,
-            'A_Patronymics': book.A_Patronymics,
-            'A_Surname': book.A_Surname,
-            'Genre_Name': book.Genre_Name,
-            'Publishing_House': book.Publishing_House,
-            'Year_of_publication': book.Year_of_publication,
-            'Price': book.Price,
-            'Descriptions': book.Descriptions
-        }
+        book = db.session.execute(book_query, {'book_id': book_id}).mappings().fetchone()
+        
+        book_details = dict(book)
+        book_details['Photo_data'] = base64.b64encode(book_details['Photo_data']).decode('utf-8')
 
         return render_template('book_page.html', book=book_details)
 
     except Exception as e:
-        return f"Виникла помилка: {e}"
+        return f"An error occurred: {e}", 500
 
 @app.route('/search', methods=['GET'])
 def search():
@@ -216,19 +211,19 @@ def login():
 def catalog():
     book_query = text("""
         SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, ph.Name_book, 
-            a.A_Name, a.A_Surname, a.A_Patronymics, g.Name_genre
+            a.A_Name, a.A_Surname, a.A_Patronymics, g.Name_genre, p.Photo_data
         FROM Book as b
-        JOIN Publishing_house as ph
-        ON b.ID_publishing_house = ph.ID_publishing_house
-        JOIN Author as a
-        ON b.ID_author = a.ID_author
-        JOIN Genre as g
-        ON b.ID_genre = g.ID_genre
+        JOIN Publishing_house as ph ON b.ID_publishing_house = ph.ID_publishing_house
+        JOIN Author as a ON b.ID_author = a.ID_author
+        JOIN Genre as g ON b.ID_genre = g.ID_genre
+        JOIN Photos AS p ON b.ID_photo = p.ID_photo
     """)
     
     b = db.session.execute(book_query)
     books = b.fetchall()
     books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+    for book in books_list:
+        book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
     return render_template('catalog.html', books=books_list)
 
 def process_form_data(form_data, db_session):
@@ -559,19 +554,13 @@ def logout():
 def add_to_cart(book_id):
     try:
         book_query = text("""
-            SELECT ID_book, Book_name, Price
-            FROM Book
+            SELECT B.ID_book, B.Book_name, B.Price
+            FROM Book AS B
             WHERE ID_book = :book_id
         """)
         book = db.session.execute(book_query, {'book_id': book_id}).fetchone()
 
-        if not book:
-            return redirect(url_for('main'))
-
         cart = session.get('cart', [])
-
-        if cart and isinstance(cart[0], int):
-            cart = []
 
         for item in cart:
             if item['id'] == book_id:
@@ -583,8 +572,7 @@ def add_to_cart(book_id):
             'id': book.ID_book,
             'name': book.Book_name,
             'price': book.Price,
-            'quantity': 1,
-            'image': '/static/img/book' + str(book.ID_book) + '.jpg'
+            'quantity': 1
         })
         session['cart'] = cart
     except Exception as e:
@@ -592,15 +580,26 @@ def add_to_cart(book_id):
 
     return redirect(url_for('main'))
 
+
 @app.route('/cart', methods=['GET', 'POST'])
 def cart():
     cart = session.get('cart', [])
     total_quantity = 0
+    total_sum = 0
+    detailed_cart = []
 
     for item in cart:
         total_quantity += item['quantity']
-    
-    total_sum = sum(item['quantity'] * item['price'] for item in cart)
+        total_sum += item['quantity'] * item['price']
+        photo_query = text("""
+            SELECT Photo_data
+            FROM Photos
+            JOIN Book ON Photos.ID_photo = Book.ID_photo
+            WHERE Book.ID_book = :book_id
+        """)
+        photo = db.session.execute(photo_query, {'book_id': item['id']}).fetchone()
+        image = base64.b64encode(photo.Photo_data).decode('utf-8') if photo else None
+        detailed_cart.append({**item, 'image': image})
 
     session['total_sum'] = total_sum
     
@@ -612,7 +611,7 @@ def cart():
         'address': session.get('user_address', ''),
     }
 
-    return render_template('cart.html', cart_items=cart, total_quantity=total_quantity, user_data=user_data)
+    return render_template('cart.html', cart_items=detailed_cart, total_quantity=total_quantity, user_data=user_data)
 
 @app.route('/remove_from_cart/<int:item_id>', methods=['POST'])
 def remove_from_cart(item_id):

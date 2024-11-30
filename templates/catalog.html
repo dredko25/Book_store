@@ -9,9 +9,8 @@
             <div class="d-flex align-items-center bg-white rounded-div p-3 shadow-sm">
                 <div class="mr-3">
                     <a href="{{ url_for('edit_item', book_id=book.ID_book) }}">
-                        <img src="{{ url_for('static', filename='img/book' ~ book.ID_book|string ~ '.jpg') }}"
-                            alt="{{ book.Book_name }}" class="rounded"
-                            style="width: 100px; height: 150px; object-fit: cover;">
+                        <img src="data:image/jpeg;base64,{{ book.Photo_data }}" class="rounded"
+                            alt="{{ book.Book_name }}" style="width: 100px; height: 150px; object-fit: cover;">
                     </a>
                 </div>
                 <div class="flex-grow-1">
