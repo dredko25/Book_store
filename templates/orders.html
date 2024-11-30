@@ -1,5 +1,13 @@
 {% extends "layout_admin.html" %}
 
+{% block search_form %}
+<form action="/search_orders" method="GET" class="d-flex">
+    <input type="text" name="query" class="form-control search-input" placeholder="Знайти замовлення..."
+        aria-label="Пошук" value="{{ request.args.get('query', '') }}">
+    <button type="submit" class="btn btn-primary search-button ml-2">Пошук</button>
+</form>
+{% endblock %}
+
 {% block content %}
 <div class="bg-white rounded-div p-4">
     <h2 class="mb-4">Список замовлень</h2>
@@ -24,7 +32,7 @@
                     </a>
                 </td>
                 <td class="py-2">
-                    {{ order.get('Comment', 'Коментар відсутній') }}
+                    {{ order.Comment if order.Comment else 'Коментар відсутній' }}
                 </td>
             </tr>
             {% endfor %}

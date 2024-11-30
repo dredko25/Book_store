@@ -172,6 +172,50 @@ def search():
 
     except Exception as e:
         return f"Виникла помилка: {e}"
+    
+@app.route('/search_catalog', methods=['GET'])
+def search_catalog():
+    query = request.args.get('query', '').strip()
+    
+    if query:
+            res = db.session.execute(text("""
+                SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, ph.Name_book, 
+                    a.A_Name, a.A_Surname, a.A_Patronymics, g.Name_genre, p.Photo_data
+                FROM Book as b
+                JOIN Publishing_house as ph ON b.ID_publishing_house = ph.ID_publishing_house
+                JOIN Author as a ON b.ID_author = a.ID_author
+                JOIN Genre as g ON b.ID_genre = g.ID_genre
+                JOIN Photos AS p ON b.ID_photo = p.ID_photo
+                WHERE B.Book_name LIKE :query
+                OR A.A_Name LIKE :query
+                OR A.A_Surname LIKE :query
+                OR PH.Name_book LIKE :query
+            """), {'query': f"%{query}%"})
+            books = res.fetchall()
+            books_list = [{column: value for column, value in zip(res.keys(), book)} for book in books]
+            for book in books_list:
+                book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+    
+    return render_template('catalog.html', books=books_list)
+    
+@app.route('/search_orders', methods=['GET'])
+def search_orders():
+    query = request.args.get('query', '').strip()
+    
+    if query:
+            res = db.session.execute(text("""
+                SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, o.Comment, c.C_Surname, c.C_Name
+                FROM Orders AS o
+                JOIN Customer AS c ON o.ID_customer = c.ID_customer
+                WHERE o.ID_orders LIKE :query
+                OR o.Date_of_orders LIKE :query
+                OR c.C_Surname LIKE :query
+                OR c.C_Name LIKE :query
+            """), {'query': f"%{query}%"})
+            orders = res.fetchall()
+            orders_list = [{column: value for column, value in zip(res.keys(), order)} for order in orders]
+    
+    return render_template('orders.html', orders=orders_list)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -453,22 +497,10 @@ def add_item_bd():
     
     return redirect(url_for('catalog'))
 
-# @app.route('/delete/<int:book_id>', methods=['POST'])
-# def delete_item(book_id):
-#     try:
-#         delete_query = text("DELETE FROM Book WHERE ID_book = :book_id")
-#         db.session.execute(delete_query, {'book_id': int(book_id)})
-#         db.session.commit()
-#         return redirect(url_for('catalog'))
-#     except Exception as e:
-#         db.session.rollback()
-#         return f"Сталася помилка під час видалення товару: {e}"
-
-
 @app.route('/orders')
 def orders():
     try:
-        orders_query = text("SELECT o.ID_orders, o.Date_of_orders, o.Total_sum FROM Orders AS o")
+        orders_query = text("SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, o.Comment FROM Orders AS o")
         o = db.session.execute(orders_query)
         orders = o.fetchall()
         orders_list = [{column: value for column, value in zip(o.keys(), order)} for order in orders]
@@ -480,14 +512,30 @@ def orders():
 def order_details(order_id):
     try:
         order_details_query = text("""
-            SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, c.ID_book, b.Book_name, c.Number_of_orders, 
-                (b.Price * c.Number_of_orders) AS Subtotal, cs.C_Surname, cs.C_Name, 
-                cs.Phone_number, cs.user_login, cs.Addres
-            FROM Orders AS o
-            JOIN Cart AS c ON o.ID_orders = c.ID_orders
-            JOIN Book AS b ON c.ID_book = b.ID_book
-            JOIN Customer AS cs ON o.ID_customer = cs.ID_customer
-            WHERE o.ID_orders = :order_id
+            SELECT 
+                o.ID_orders, 
+                o.Date_of_orders, 
+                o.Total_sum, 
+                o.Comment, 
+                c.ID_book, 
+                b.Book_name, 
+                c.Number_of_orders, 
+                (b.Price * c.Number_of_orders) AS Subtotal, 
+                cs.C_Surname, 
+                cs.C_Name, 
+                cs.Phone_number, 
+                cs.user_login, 
+                cs.Addres 
+            FROM 
+                Orders AS o 
+            JOIN 
+                Cart AS c ON o.ID_orders = c.ID_orders 
+            JOIN 
+                Book AS b ON c.ID_book = b.ID_book 
+            JOIN 
+                Customer AS cs ON o.ID_customer = cs.ID_customer 
+            WHERE 
+                o.ID_orders = :order_id
         """)
         o = db.session.execute(order_details_query, {'order_id': order_id})
         orders = o.fetchall()
@@ -820,8 +868,17 @@ def payment():
 def guarantee():
     return render_template('guarantee.html')
 
+import shutil
+@app.route('/backup_db')
+def backup_db():
+    db_path = r"C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\Book_store.mdf"
+    backup_path = 'C:/Users/dredk/Desktop/Код/Book_store/backup_db.mdf'
 
-
+    try:
+        shutil.copy(db_path, backup_path)
+        return "Резервну копію створено успішно"
+    except Exception as e:
+        return f"Сталася помилка: {str(e)}"
 
 
 if __name__ == '__main__':

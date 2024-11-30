@@ -27,6 +27,19 @@
                 <a href="/" id="logo">
                     <div><i class="fas fa-book-open"></i> Bookstore</div>
                 </a>
+                <div class="search-container flex-grow-1 mx-3">
+                    {% block search_form %}
+                    <!-- За замовчуванням форма пошуку по каталогу -->
+                    <form action="/search_catalog" method="GET" class="d-flex">
+                        <input type="text" name="query" class="form-control search-input" placeholder="Знайти книгу..."
+                            aria-label="Пошук" value="{{ request.args.get('query', '') }}">
+                        <button type="submit" class="btn btn-primary search-button ml-2">Пошук</button>
+                    </form>
+                    {% endblock %}
+                </div>
+                <a href="{{ url_for('backup_db') }}" class="icon-button" title="Створити резервну копію БД">
+                    <i class="fas fa-database"></i> Резервна копія
+                </a>
             </div>
         </header>
         <main>
