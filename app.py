@@ -1,6 +1,9 @@
 import base64
 from datetime import datetime
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask_pymongo import PyMongo
+from gridfs import GridFSBucket
+import base64
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,116 +14,385 @@ from email.mime.text import MIMEText
 app = Flask(__name__)
 app.secret_key = 'a8e9f8ad6cfd4e1bb5a34b7e8e2c9fd1afbd2c1f12a56d3e7f8a9e'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mssql+pyodbc://@localhost/Book_store?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes'
-db = SQLAlchemy(app)
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mssql+pyodbc://@localhost/Book_store?driver=ODBC+Driver+17+for+SQL+Server&trusted_connection=yes'
+# db = SQLAlchemy(app)
+
+app.config["MONGO_URI"] = "mongodb+srv://dredko25:gY7bukFt4hcGxBc4@cluster0.xs1ymu3.mongodb.net/Book_store?retryWrites=true&w=majority"
+
+mongo = PyMongo(app)
+
+try:
+    with app.app_context():
+        mongo.cx.server_info()
+        print("ОК!")
+except Exception as e:
+    print(f"Помилка: {e}")
+
+db = mongo.db
+fs = GridFSBucket(db)
 
 @app.context_processor
 def inject_genres():
-    genres_query = db.session.execute(text("SELECT Name_genre FROM Genre")).mappings().fetchall()
-    genres = [{'Name_genre': row['Name_genre']} for row in genres_query]
+    genres_query = db.Genre.find({}, {"_id": 0, "Name_genre": 1})
+    genres = [{'Name_genre': genre['Name_genre']} for genre in genres_query]
     return {'genres': genres}
+
+# @app.route('/')
+# def main():
+#     try:        
+#         sort = request.args.get('sort', '')
+        
+#         query = """
+#             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
+#                    B.Price, B.Year_of_publication, P.Photo_data
+#             FROM Book AS B
+#             JOIN Author AS A ON B.ID_author = A.ID_author
+#             JOIN Photos AS P ON B.ID_photo = P.ID_photo
+#         """
+        
+#         if sort == 'price_asc':
+#             query += " ORDER BY B.Price ASC"
+#         elif sort == 'price_desc':
+#             query += " ORDER BY B.Price DESC"
+#         elif sort == 'name_asc':
+#             query += " ORDER BY B.Book_name ASC"
+#         elif sort == 'name_desc':
+#             query += " ORDER BY B.Book_name DESC"
+
+#         b = db.session.execute(text(query))
+#         books = b.fetchall()
+
+#         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+#         for book in books_list:
+#             book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+
+#         return render_template('main.html', books=books_list)
+
+#     except Exception as e:
+#         return f"Виникла помилка: {e}"
 
 @app.route('/')
 def main():
-    try:        
+    try:
         sort = request.args.get('sort', '')
-        
-        query = """
-            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
-                   B.Price, B.Year_of_publication, P.Photo_data
-            FROM Book AS B
-            JOIN Author AS A ON B.ID_author = A.ID_author
-            JOIN Photos AS P ON B.ID_photo = P.ID_photo
-        """
-        
-        if sort == 'price_asc':
-            query += " ORDER BY B.Price ASC"
-        elif sort == 'price_desc':
-            query += " ORDER BY B.Price DESC"
-        elif sort == 'name_asc':
-            query += " ORDER BY B.Book_name ASC"
-        elif sort == 'name_desc':
-            query += " ORDER BY B.Book_name DESC"
+        sort_options = {
+            'price_asc': ('Price', 1),
+            'price_desc': ('Price', -1),
+            'name_asc': ('Book_name', 1),
+            'name_desc': ('Book_name', -1)
+        }
+        sort_field, sort_order = sort_options.get(sort, (None, None))
 
-        b = db.session.execute(text(query))
-        books = b.fetchall()
+        books_query = db['Book'].aggregate([
+            {
+                '$lookup': {
+                    'from': 'Author',
+                    'localField': 'author_id',
+                    'foreignField': '_id',
+                    'as': 'Author'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'fs.files',
+                    'localField': 'photo_id',
+                    'foreignField': '_id',
+                    'as': 'Photo'
+                }
+            },
+            {
+                '$unwind': '$Author'
+            },
+            {
+                '$unwind': {
+                    'path': '$Photo',
+                    'preserveNullAndEmptyArrays': True
+                }
+            }
+        ])
+        
+        if sort_field:
+            books_query = books_query.sort([(sort_field, sort_order)])
 
-        books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
-        for book in books_list:
-            book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+        books_list = []
+        for book in books_query:
+            book_item = {
+                'ID_book': book['_id'],
+                'Book_name': book['Book_name'],
+                'A_Name': book['Author']['A_Name'],
+                'A_Patronymics': book['Author']['A_Patronymics'],
+                'A_Surname': book['Author']['A_Surname'],
+                'Price': book['Price'],
+                'Year_of_publication': book['Year_of_publication']
+            }
+
+            if 'Photo' in book and book['Photo']:
+                photo_id = book['Photo']['_id']
+                try:
+                    with fs.open_download_stream(photo_id) as file:
+                        photo_data = file.read()
+                        book_item['Photo_data'] = base64.b64encode(photo_data).decode('utf-8')
+                except Exception as e:
+                    print(f"Помилка при завантаженні фото: {e}")
+                    book_item['Photo_data'] = None
+            else:
+                book_item['Photo_data'] = None
+
+            books_list.append(book_item)
 
         return render_template('main.html', books=books_list)
 
     except Exception as e:
         return f"Виникла помилка: {e}"
     
+# @app.route('/genre/<genre_name>')
+# def genre_books(genre_name):
+#     try:
+#         genre_query = db.session.execute(text("SELECT ID_genre FROM Genre WHERE Name_genre = :genre_name"), {'genre_name': genre_name})
+#         genre_result = genre_query.fetchone()
+#         genre_id = genre_result[0]
+
+#         sort = request.args.get('sort', '')
+        
+#         query = """
+#             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price, P.Photo_data
+#             FROM Book as B 
+#             JOIN Author as A ON B.ID_author = A.ID_author 
+#             JOIN Photos AS P ON B.ID_photo = P.ID_photo
+#             WHERE B.ID_genre = :genre_id
+#         """
+        
+#         if sort == 'price_asc':
+#             query += " ORDER BY B.Price ASC"
+#         elif sort == 'price_desc':
+#             query += " ORDER BY B.Price DESC"
+#         elif sort == 'name_asc':
+#             query += " ORDER BY B.Book_name ASC"
+#         elif sort == 'name_desc':
+#             query += " ORDER BY B.Book_name DESC"
+            
+#         b = db.session.execute(
+#             text(query),
+#             {'genre_id': genre_id}
+#         )
+        
+#         books = b.fetchall()
+
+#         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
+#         for book in books_list:
+#             book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+
+#         return render_template('genre_books.html', genre=genre_name, books=books_list)
+
+#     except Exception as e:
+#         return f"Виникла помилка: {e}"
+
 @app.route('/genre/<genre_name>')
 def genre_books(genre_name):
     try:
-        genre_query = db.session.execute(text("SELECT ID_genre FROM Genre WHERE Name_genre = :genre_name"), {'genre_name': genre_name})
-        genre_result = genre_query.fetchone()
-        genre_id = genre_result[0]
+        genre = db['Genre'].find_one({'Name_genre': genre_name})
+        if not genre:
+            return f"Жанр '{genre_name}' не знайдений."
+
+        genre_id = genre['_id']
 
         sort = request.args.get('sort', '')
-        
-        query = """
-            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price, P.Photo_data
-            FROM Book as B 
-            JOIN Author as A ON B.ID_author = A.ID_author 
-            JOIN Photos AS P ON B.ID_photo = P.ID_photo
-            WHERE B.ID_genre = :genre_id
-        """
-        
-        if sort == 'price_asc':
-            query += " ORDER BY B.Price ASC"
-        elif sort == 'price_desc':
-            query += " ORDER BY B.Price DESC"
-        elif sort == 'name_asc':
-            query += " ORDER BY B.Book_name ASC"
-        elif sort == 'name_desc':
-            query += " ORDER BY B.Book_name DESC"
-            
-        b = db.session.execute(
-            text(query),
-            {'genre_id': genre_id}
-        )
-        
-        books = b.fetchall()
+        sort_options = {
+            'price_asc': ('Price', 1),
+            'price_desc': ('Price', -1),
+            'name_asc': ('Book_name', 1),
+            'name_desc': ('Book_name', -1)
+        }
+        sort_field, sort_order = sort_options.get(sort, (None, None))
 
-        books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
-        for book in books_list:
-            book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+        books_query = db['Book'].aggregate([
+            {
+                '$match': {'genre_id': genre_id}
+            },
+            {
+                '$lookup': {
+                    'from': 'Author',
+                    'localField': 'author_id',
+                    'foreignField': '_id',
+                    'as': 'Author'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'fs.files',
+                    'localField': 'photo_id',
+                    'foreignField': '_id',
+                    'as': 'Photo'
+                }
+            },
+            {
+                '$unwind': '$Author'
+            },
+            {
+                '$unwind': {
+                    'path': '$Photo',
+                    'preserveNullAndEmptyArrays': True
+                }
+            }
+        ])
+        
+        if sort_field:
+            books_query = books_query.sort([(sort_field, sort_order)])
+
+        books_list = []
+        for book in books_query:
+            book_item = {
+                'ID_book': book['_id'],
+                'Book_name': book['Book_name'],
+                'A_Name': book['Author']['A_Name'],
+                'A_Patronymics': book['Author']['A_Patronymics'],
+                'A_Surname': book['Author']['A_Surname'],
+                'Price': book['Price'],
+                'Year_of_publication': book['Year_of_publication']
+            }
+
+            if 'Photo' in book and book['Photo']:
+                photo_id = book['Photo']['_id']
+                try:
+                    with fs.open_download_stream(photo_id) as file:
+                        photo_data = file.read()
+                        book_item['Photo_data'] = base64.b64encode(photo_data).decode('utf-8')
+                except Exception as e:
+                    print(f"Помилка при завантаженні фото: {e}")
+                    book_item['Photo_data'] = None
+            else:
+                book_item['Photo_data'] = None
+
+            books_list.append(book_item)
 
         return render_template('genre_books.html', genre=genre_name, books=books_list)
 
     except Exception as e:
         return f"Виникла помилка: {e}"
+
     
     
+# @app.route('/book/<int:book_id>')
+# def book_details(book_id):
+#     try:        
+#         book_query = text("""
+#             SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
+#                    G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
+#                    B.Year_of_publication, B.Price, B.Descriptions, P.Photo_data
+#             FROM Book AS B
+#             JOIN Author AS A ON B.ID_author = A.ID_author
+#             JOIN Genre AS G ON B.ID_genre = G.ID_genre
+#             JOIN Publishing_house AS PH ON B.ID_publishing_house = PH.ID_publishing_house
+#             JOIN Photos AS P ON B.ID_photo = P.ID_photo
+#             WHERE B.ID_book = :book_id
+#         """)
+        
+#         book = db.session.execute(book_query, {'book_id': book_id}).mappings().fetchone()
+        
+#         book_details = dict(book)
+#         book_details['Photo_data'] = base64.b64encode(book_details['Photo_data']).decode('utf-8')
+
+#         return render_template('book_page.html', book=book_details)
+
+#     except Exception as e:
+#         return f"An error occurred: {e}", 500
+
 @app.route('/book/<int:book_id>')
 def book_details(book_id):
-    try:        
-        book_query = text("""
-            SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
-                   G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
-                   B.Year_of_publication, B.Price, B.Descriptions, P.Photo_data
-            FROM Book AS B
-            JOIN Author AS A ON B.ID_author = A.ID_author
-            JOIN Genre AS G ON B.ID_genre = G.ID_genre
-            JOIN Publishing_house AS PH ON B.ID_publishing_house = PH.ID_publishing_house
-            JOIN Photos AS P ON B.ID_photo = P.ID_photo
-            WHERE B.ID_book = :book_id
-        """)
-        
-        book = db.session.execute(book_query, {'book_id': book_id}).mappings().fetchone()
-        
-        book_details = dict(book)
-        book_details['Photo_data'] = base64.b64encode(book_details['Photo_data']).decode('utf-8')
+    try:
+        # Отримуємо книгу за її ID
+        book_query = db['Book'].aggregate([
+            {
+                '$match': {'_id': int(book_id)}  # Знаходимо книгу за ID
+            },
+            {
+                '$lookup': {
+                    'from': 'Author',  # З’єднуємо з колекцією Author
+                    'localField': 'author_id',
+                    'foreignField': '_id',
+                    'as': 'Author'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'Genre',  # З’єднуємо з колекцією Genre
+                    'localField': 'genre_id',
+                    'foreignField': '_id',
+                    'as': 'Genre'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'Publishing_house',  # З’єднуємо з колекцією Publishing_house
+                    'localField': 'publishing_house_id',
+                    'foreignField': '_id',
+                    'as': 'Publishing_House'
+                }
+            },
+            {
+                '$lookup': {
+                    'from': 'fs.files',  # З’єднуємо з колекцією fs.files для фото
+                    'localField': 'photo_id',
+                    'foreignField': '_id',
+                    'as': 'Photo'
+                }
+            },
+            {
+                '$unwind': '$Author'  # Розпаковуємо авторів
+            },
+            {
+                '$unwind': '$Genre'  # Розпаковуємо жанри
+            },
+            {
+                '$unwind': '$Publishing_House'  # Розпаковуємо видавництва
+            },
+            {
+                '$unwind': {
+                    'path': '$Photo',
+                    'preserveNullAndEmptyArrays': True  # Розпаковуємо фото (якщо є)
+                }
+            }
+        ])
 
+        # Отримуємо результат
+        book = next(book_query, None)
+
+        if not book:
+            return "Book not found", 404
+
+        # Формуємо деталі книги
+        book_details = {
+            'ID_book': str(book['_id']),
+            'Book_name': book['Book_name'],
+            'A_Name': book['Author']['A_Name'],
+            'A_Patronymics': book['Author']['A_Patronymics'],
+            'A_Surname': book['Author']['A_Surname'],
+            'Genre_Name': book['Genre']['Name_genre'],
+            'Publishing_House': book['Publishing_House']['Name_book'],
+            'Year_of_publication': book['Year_of_publication'],
+            'Price': book['Price'],
+            'Descriptions': book['Descriptions']
+        }
+
+        # Обробка фото (якщо воно є)
+        if 'Photo' in book and book['Photo']:
+            photo_id = book['Photo']['_id']
+            try:
+                with fs.open_download_stream(photo_id) as file:
+                    photo_data = file.read()
+                    book_details['Photo_data'] = base64.b64encode(photo_data).decode('utf-8')
+            except Exception as e:
+                print(f"Помилка при завантаженні фото: {e}")
+                book_details['Photo_data'] = None
+        else:
+            book_details['Photo_data'] = None
+
+        # Відправляємо результат на шаблон
         return render_template('book_page.html', book=book_details)
 
     except Exception as e:
         return f"An error occurred: {e}", 500
+
 
 @app.route('/search', methods=['GET'])
 def search():
