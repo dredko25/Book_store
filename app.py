@@ -132,11 +132,12 @@ def search():
             b = db.session.execute(text("""
                 SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, 
                     G.Name_genre AS Genre_Name, PH.Name_book AS Publishing_House,
-                    B.Year_of_publication, B.Price, B.Descriptions
+                    B.Year_of_publication, B.Price, B.Descriptions, P.Photo_data
                 FROM Book AS B
                 JOIN Author AS A ON B.ID_author = A.ID_author
                 JOIN Genre AS G ON B.ID_genre = G.ID_genre
                 JOIN Publishing_house AS PH ON B.ID_publishing_house = PH.ID_publishing_house
+                JOIN Photos AS P ON B.ID_photo = P.ID_photo
                 WHERE B.Book_name LIKE :query
                 OR A.A_Name LIKE :query
                 OR A.A_Surname LIKE :query
@@ -145,9 +146,10 @@ def search():
 
         else:
             b = db.session.execute(text("""
-                SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price 
+                SELECT B.ID_book, B.Book_name, A.A_Name, A.A_Patronymics, A.A_Surname, B.Price, P.Photo_data
                 FROM Book as B 
                 JOIN Author as A ON b.ID_author = A.ID_author
+                JOIN Photos AS P ON B.ID_photo = P.ID_photo
             """))
         
         if sort == 'price_asc':
@@ -162,7 +164,9 @@ def search():
             books = b.fetchall()
             
         books_list = [{column: value for column, value in zip(b.keys(), book)} for book in books]
-
+        for book in books_list:
+                book['Photo_data'] = base64.b64encode(book['Photo_data']).decode('utf-8')
+                
         if not books_list:
             message = "Нічого не знайдено за вашим запитом."
         else:
