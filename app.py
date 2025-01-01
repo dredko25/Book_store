@@ -625,12 +625,19 @@ def register():
 
     hashed_password = generate_password_hash(password)
 
-    customer_query = text("""
-        INSERT INTO Customer (user_login, user_password, C_Surname, C_Name, Phone_number, Addres)
-        VALUES (:email, :password, :last_name, :first_name, :phone, :address)
+    check_user_query = text("""
+        SELECT COUNT(*) FROM Customer WHERE user_login = :email
     """)
-
     try:
+        result = db.session.execute(check_user_query, {'email': email}).scalar()
+        if result > 0:
+            return "Користувач із таким логіном уже існує!"
+
+        customer_query = text("""
+            INSERT INTO Customer (user_login, user_password, C_Surname, C_Name, Phone_number, Addres)
+            VALUES (:email, :password, :last_name, :first_name, :phone, :address)
+        """)
+
         db.session.execute(customer_query, {
             'email': email,
             'password': hashed_password,
@@ -640,17 +647,18 @@ def register():
             'address': address
         })
         db.session.commit()
-        
+
         session['user_login'] = email
         session['user_name'] = first_name
         session['user_surname'] = last_name
         session['user_phone'] = phone
         session['user_address'] = address
-        
+
         return redirect(url_for('main'))
     except Exception as e:
         db.session.rollback()
         return f"Сталася помилка: {e}"
+
 
 @app.route('/logout')
 def logout():
