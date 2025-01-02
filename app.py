@@ -1,6 +1,7 @@
 import base64
 from datetime import datetime
 from flask import Flask, flash, redirect, render_template, request, session, url_for
+from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,6 +20,15 @@ def inject_genres():
     genres_query = db.session.execute(text("SELECT Name_genre FROM Genre")).mappings().fetchall()
     genres = [{'Name_genre': row['Name_genre']} for row in genres_query]
     return {'genres': genres}
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('is_admin'):
+            flash("Доступ заборонено. Ви повинні бути адміністратором.", "danger")
+            return redirect(url_for('main'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def main():
@@ -178,6 +188,7 @@ def search():
         return f"Виникла помилка: {e}"
     
 @app.route('/search_catalog', methods=['GET'])
+@admin_required
 def search_catalog():
     query = request.args.get('query', '').strip()
     
@@ -203,6 +214,7 @@ def search_catalog():
     return render_template('catalog.html', books=books_list)
     
 @app.route('/search_orders', methods=['GET'])
+@admin_required
 def search_orders():
     query = request.args.get('query', '').strip()
     
@@ -256,6 +268,7 @@ def login():
     return redirect(url_for('main'))
 
 @app.route('/catalog')
+@admin_required
 def catalog():
     book_query = text("""
         SELECT b.ID_book, b.Book_name, b.Year_of_publication, b.Price, ph.Name_book, 
@@ -358,6 +371,7 @@ def process_form_data(form_data, db_session):
         raise e
 
 @app.route('/edit/<int:book_id>', methods=['GET', 'POST'])
+@admin_required
 def edit_item(book_id):
     if request.method == 'POST':
         action = request.form.get('action')
@@ -448,6 +462,7 @@ def edit_item(book_id):
     return render_template('edit_item.html', book=book, genres=genres, publishing_houses=publishing_houses)
 
 @app.route('/add-item')
+@admin_required
 def add_item():
     queries = {
         'genres': "SELECT g.Name_genre FROM Genre as g",
@@ -462,6 +477,7 @@ def add_item():
     return render_template('add_item.html', genres=data['genres'], publishing_houses=data['publishing_houses'])
 
 @app.route('/add-item-db', methods=['POST'])
+@admin_required
 def add_item_bd():
     form_data = request.form
     file_data = request.files.get('book_cover')
@@ -502,6 +518,7 @@ def add_item_bd():
     return redirect(url_for('catalog'))
 
 @app.route('/orders')
+@admin_required
 def orders():
     try:
         orders_query = text("SELECT o.ID_orders, o.Date_of_orders, o.Total_sum, o.Comment FROM Orders AS o")
@@ -513,6 +530,7 @@ def orders():
         return str(e)
 
 @app.route('/orders/<int:order_id>')
+@admin_required
 def order_details(order_id):
     try:
         order_details_query = text("""
@@ -549,6 +567,7 @@ def order_details(order_id):
         return str(e)
 
 @app.route('/update_comment/<int:order_id>', methods=['POST'])
+@admin_required
 def update_comment(order_id):
     try:
         comment = request.form.get('comment')
@@ -564,6 +583,7 @@ def update_comment(order_id):
         return str(e)
     
 @app.route('/cancel_order/<int:order_id>', methods=['POST'])
+@admin_required
 def cancel_order(order_id):
     try:
         cancel_query = text("""
@@ -578,6 +598,7 @@ def cancel_order(order_id):
         return redirect(url_for('order_details', order_id=order_id))
 
 @app.route('/send_newsletter', methods=['POST'])
+@admin_required
 def send_newsletter():
     subject = request.form['subject']
     message = request.form['message']
@@ -608,6 +629,7 @@ def send_email(to_email, subject, message):
 
 
 @app.route('/mailing')
+@admin_required
 def mailing():
     return render_template('mailing.html')
 
@@ -882,6 +904,7 @@ def guarantee():
 
 import shutil
 @app.route('/backup_db')
+@admin_required
 def backup_db():
     db_path = r"C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\DATA\Book_store.mdf"
     backup_path = 'C:/Users/dredk/Desktop/Код/Book_store/backup_db.mdf'
