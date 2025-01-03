@@ -497,8 +497,8 @@ def add_item_bd():
         data = process_form_data(form_data, db.session)
 
         insert_book_query = text("""
-            INSERT INTO Book (Book_name, Year_of_publication, Price, ID_author, ID_genre, ID_publishing_house, ID_photo)
-            VALUES (:book_name, :year, :price, :author_id, :genre_id, :publisher_id, :photo_id)
+            INSERT INTO Book (Book_name, Year_of_publication, Price, ID_author, ID_genre, ID_publishing_house, ID_photo, Descriptions)
+            VALUES (:book_name, :year, :price, :author_id, :genre_id, :publisher_id, :photo_id, :description)
         """)
         db.session.execute(insert_book_query, {
             'book_name': data['book_title'],
@@ -507,7 +507,8 @@ def add_item_bd():
             'author_id': data['author_id'],
             'genre_id': data['genre_id'],
             'publisher_id': data['publisher_id'],
-            'photo_id': photo_id
+            'photo_id': photo_id,
+            'description': data['description']
         })
         db.session.commit()
 
